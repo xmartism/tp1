@@ -1,0 +1,206 @@
+/* Reset */
+body, h1, h2, p, ul, li, ol, table {
+    margin: 0;
+    padding: 0;
+}
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f8fc;
+    color: #222;
+    line-height: 1.6;
+}
+
+/* Navbar */
+nav {
+    background: #0057b7; /* hlavná modrá */
+    padding: 0.5rem 1rem;
+}
+nav ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+nav li {
+    margin: 0.3rem;
+    flex: 1 1 auto;
+    text-align: center;
+}
+nav a {
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    display: block;
+    padding: 0.7rem 1.2rem;
+    border-radius: 6px;
+    transition: background 0.3s;
+    background: #0057b7; /* default same as navbar */
+}
+nav a:hover {
+    background: #00479b; /* darker blue */
+}
+nav a.active {
+    background: #00479b; /* darker blue for active page */
+}
+
+/* Hero (clean, no background box) */
+.hero {
+    background: none;       /* no background color */
+    color: #0057b7;         /* main project blue */
+    padding: 4rem 1rem 2rem 1rem;
+    text-align: center;
+}
+.hero-inner {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.hero-tag {
+    display: inline-block;
+    color: #0057b7;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.hero h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+.hero-subtitle {
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    color: #003f7f; /* slightly darker shade */
+}
+.hero-teacher {
+    font-size: 1rem;
+    color: #333;  /* neutral grey for teacher */
+}
+
+
+/* Main content */
+main {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Card container */
+.card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin: 2rem auto;
+    max-width: 900px;
+}
+
+/* Tasks section */
+.tasks {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+.tasks h2 {
+    margin-bottom: 1rem;
+}
+.tasks ul {
+    list-style: none;
+    padding: 0;
+}
+.tasks li {
+    background: white;
+    padding: 1rem;
+    margin: 0.6rem 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+}
+.task-number {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #0057b7;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    line-height: 28px;
+    margin-right: 1rem;
+}
+
+/* Team grid (max 3 per row) */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* max 3 in a row */
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+@media (max-width: 900px) {
+    .team-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 600px) {
+    .team-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.team-member {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.team-member img {
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    width: 120px;
+    height: 120px;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+    background: white;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 0.8rem;
+    text-align: left;
+}
+table th {
+    background: #0057b7;
+    color: white;
+}
+
+/* Mobile navbar behavior */
+@media (max-width: 700px) {
+    nav li {
+        flex: 1 1 45%; /* 2 in a row */
+    }
+}
+@media (max-width: 400px) {
+    nav li {
+        flex: 1 1 100%; /* full width */
+    }
+}
+
+/* Footer (optional if added later) */
+footer {
+    text-align: center;
+    padding: 1rem;
+    margin-top: 3rem;
+    background: #003f7f;
+    color: white;
+    font-size: 0.9rem;
+}
