@@ -1,0 +1,112 @@
+%https://www.overleaf.com/read/tphzjwsjjrvm#398e0d
+
+\documentclass{article}
+\usepackage{graphicx}
+
+\title{TP1}
+\author{Michal Skvarka}
+\date{October 2025}
+
+\begin{document}
+
+\maketitle
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[slovak]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\begin{document}
+
+\section*{Matematicko-štatistické Metódy v Predikcii Časových Radov}
+
+Matematicko-štatistické metódy
+Tieto metódy vychádzajú z predpokladu, že historické správanie radu sa s určitou mierou pravdepodobnosti prenesie aj do budúcnosti, pričom ich cieľom je \textbf{kvantifikovať a modelovať systematické zložky} dát.
+
+\subsection*{1. Dekompozícia Časového Radu}
+
+Základom pre prácu so štatistickými modelmi je \textbf{dekompozícia} časového radu $y_t$ na jeho základné zložky, ktoré sa potom modelujú samostatne:
+$$y_t = f(T_t, S_t, \epsilon_t)$$
+
+Kde:
+\begin{itemize}
+    \item \textbf{Trend} ($T_t$): Dlhodobý systematický smer vývoja (rast, pokles).
+    \item \textbf{Sezónnosť} ($S_t$): Pravidelne sa opakujúce fluktuácie (napr. ročné, mesačné).
+    \item \textbf{Náhodná/Reziduálna zložka} ($\epsilon_t$): Nezákonitý, nepredvídateľný šum.
+\end{itemize}
+
+Najčastejšie sa používajú dva modely dekompozície:
+\begin{itemize}
+    \item \textbf{Aditívny model}: $y_t = T_t + S_t + \epsilon_t$. Vhodný, ak je sezónna zložka konštantná bez ohľadu na úroveň trendu.
+    \item \textbf{Multiplikatívny model}: $y_t = T_t \cdot S_t \cdot \epsilon_t$. Vhodný, ak sezónne fluktuácie rastú alebo klesajú úmerne s trendom.
+\end{itemize}
+
+\subsection*{2. Klasické Predikčné Metódy: Vyhladzovanie}
+
+Tieto metódy, vhodné najmä na krátkodobé predpovede, sa zameriavajú na zníženie vplyvu náhodnej zložky. Kľúčovou technikou je \textbf{Exponenciálne vyhladzovanie (ES)}, ktoré prideľuje najvyššiu váhu najnovším pozorovaniam.
+
+\subsubsection*{A. Jednoduché Exponenciálne Vyhladzovanie (SES)}
+Metóda je určená pre rady \textbf{bez trendu a sezónnosti}. Modeluje iba úroveň radu $\ell_t$.
+
+\begin{itemize}
+    \item \textbf{Vzorec pre úroveň ($\ell_t$):}
+    $$\ell_t = \alpha y_t + (1 - \alpha) \ell_{t-1}$$
+    \item \textbf{Vzorec pre predpoveď ($\hat{y}_{t+h|t}$):}
+    $$\hat{y}_{t+h|t} = \ell_t$$
+\end{itemize}
+Kde $\alpha$ je parameter vyhladzovania úrovne ($0 \le \alpha \le 1$).
+
+\subsubsection*{B. Holtova Metóda (Dvojité ES)}
+Rozšírenie SES, ktoré zahŕňa zložku pre \textbf{trend} ($b_t$).
+
+\begin{itemize}
+    \item \textbf{Vzorec pre úroveň ($\ell_t$):}
+    $$\ell_t = \alpha y_t + (1 - \alpha) (\ell_{t-1} + b_{t-1})$$
+    \item \textbf{Vzorec pre trend ($b_t$):}
+    $$b_t = \beta (\ell_t - \ell_{t-1}) + (1 - \beta) b_{t-1}$$
+    \item \textbf{Vzorec pre predpoveď ($\hat{y}_{t+h|t}$):}
+    $$\hat{y}_{t+h|t} = \ell_t + h b_t$$
+\end{itemize}
+Kde $\beta$ je parameter vyhladzovania trendu ($0 \le \beta \le 1$).
+
+\subsubsection*{C. Holt-Wintersova Metóda (Trojité ES)}
+Najkomplexnejšia ES metóda, ktorá modeluje úroveň, trend aj \textbf{sezónnosť} ($s_t$).
+
+\begin{itemize}
+    \item \textbf{Vzorec pre úroveň ($\ell_t$) - Aditívny model:}
+    $$\ell_t = \alpha (y_t - s_{t-m}) + (1 - \alpha) (\ell_{t-1} + b_{t-1})$$
+    \item \textbf{Vzorec pre trend ($b_t$):}
+    $$b_t = \beta (\ell_t - \ell_{t-1}) + (1 - \beta) b_{t-1}$$
+    \item \textbf{Vzorec pre sezónnosť ($s_t$):}
+    $$s_t = \gamma (y_t - \ell_{t-1} - b_{t-1}) + (1 - \gamma) s_{t-m}$$
+    \item \textbf{Vzorec pre predpoveď ($\hat{y}_{t+h|t}$):}
+    $$\hat{y}_{t+h|t} = \ell_t + h b_t + s_{t-m+h_m^+}$$
+\end{itemize}
+Kde $\gamma$ je parameter vyhladzovania sezónnosti ($0 \le \gamma \le 1$) a $m$ je dĺžka sezóny.
+
+\subsection*{Predikcia a Intervaly Spoľahlivosti}
+Výhodou štatistických modelov je poskytovanie \textbf{intervalu spoľahlivosti (Confidence Interval, CI)}, ktorý kvantifikuje neistotu predpovede:
+$$\text{Interval Spoľahlivosti} = \text{Predpoveď} \pm (Z_{\alpha/2} \cdot \text{Štandardná chyba predpovede})$$
+Čím dlhší je horizont predpovede, tým širší a menej presný je interval spoľahlivosti.
+
+\subsection*{Aplikácia na Predpovedanie Cien Akcií}
+
+Hoci zadanie vyžaduje teoretickú aplikáciu, je dôležité konštatovať, že modely ES nie sú dlhodobo vhodné pre predpovedanie cien akcií z dôvodu \textbf{hypotézy efektívneho trhu (EMH)} a modelu \textbf{Random Walk} ($P_t = P_{t-1} + \epsilon_t$). Tieto teórie predpokladajú, že zmeny cien sú nezávislé a nepredvídateľné.
+
+\subsubsection*{Najvhodnejšia metóda z danej sady (teoretický benchmark)}
+
+Ak je nutné vybrať metódu, ktorá sa najviac hodí k predpokladu \textbf{Random Walk} (nezávislé zmeny, žiadny systematický trend/sezónnosť), je to:
+
+\begin{itemize}
+    \item \textbf{Jednoduché Exponenciálne Vyhladzovanie (SES)}.
+\end{itemize}
+
+SES sa najviac približuje \textbf{Naívnej metóde 1} ($\hat{y}_{t+h|t} = y_t$), ktorá je pre finančné časové rady najlepším jednoduchým benchmarkom. Aplikácia Holtovej alebo Holt-Wintersovej metódy by bola horšia, pretože by viedla k systematickým chybám kvôli umelému zavedeniu neexistujúcich trendov a sezónnosti. SES by preto mala byť použitá ako základná matematicko-štatistická benchmarková metóda pre finančné dáta.
+
+\end{document}
+
+\end{document}
