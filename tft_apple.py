@@ -27,8 +27,8 @@ df["series_id"] = 0
 df["target"] = df["Close"]
 
 # === 3. Definícia parametrov ===
-max_encoder_length = 30   # koľko dní spätne berieme ako vstup
-max_prediction_length = 7 # koľko dní dopredu predpovedáme
+max_encoder_length = 60   # koľko dní spätne berieme ako vstup
+max_prediction_length = 30 # koľko dní dopredu predpovedáme
 
 # Rozdelenie dát (80 % tréning, 20 % validácia)
 train_size = int(len(df) * 0.8)
@@ -58,18 +58,18 @@ val_dataloader = val_dataset.to_dataloader(train=False, batch_size=batch_size)
 # === 6. Tréning TFT modelu ===
 trainer = Trainer(
     max_epochs=30,
-    accelerator="auto",
+    accelerator="gpu",
     enable_model_summary=True
 )
 
 tft = TemporalFusionTransformer.from_dataset(
     train_dataset,
     learning_rate=0.001,
-    hidden_size=16,
-    attention_head_size=4,
-    dropout=0.1,
-    hidden_continuous_size=8,
-    output_size=7,  # pre QuantileLoss
+    hidden_size=64,
+    attention_head_size=8,
+    dropout=0.2,
+    hidden_continuous_size=16,
+    output_size=7,  # pre quantile loss
     loss=QuantileLoss(),
     log_interval=10,
     log_val_interval=1,
