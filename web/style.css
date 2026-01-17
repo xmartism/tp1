@@ -1,4 +1,4 @@
-/* Reset */
+
 body, h1, h2, p, ul, li, ol, table {
     margin: 0;
     padding: 0;
@@ -10,9 +10,8 @@ body {
     line-height: 1.6;
 }
 
-/* Navbar */
 nav {
-    background: #0057b7; /* hlavná modrá */
+    background: #0057b7; 
     padding: 0.5rem 1rem;
 }
 nav ul {
@@ -36,19 +35,18 @@ nav a {
     padding: 0.7rem 1.2rem;
     border-radius: 6px;
     transition: background 0.3s;
-    background: #0057b7; /* default same as navbar */
+    background: #0057b7; 
 }
 nav a:hover {
-    background: #00479b; /* darker blue */
+    background: #00479b; 
 }
 nav a.active {
-    background: #00479b; /* darker blue for active page */
+    background: #00479b; 
 }
 
-/* Hero (clean, no background box) */
 .hero {
-    background: none;       /* no background color */
-    color: #0057b7;         /* main project blue */
+    background: none;       
+    color: #0057b7;        
     padding: 4rem 1rem 2rem 1rem;
     text-align: center;
 }
@@ -74,22 +72,22 @@ nav a.active {
     font-size: 1.3rem;
     font-weight: 400;
     margin-bottom: 1.5rem;
-    color: #003f7f; /* slightly darker shade */
+    color: #003f7f; 
 }
 .hero-teacher {
     font-size: 1rem;
-    color: #333;  /* neutral grey for teacher */
+    color: #333; 
 }
 
 
-/* Main content */
+
 main {
     max-width: 1000px;
     margin: 2rem auto;
     padding: 0 1rem;
 }
 
-/* Card container */
+
 .card {
     background: white;
     padding: 2rem;
@@ -99,7 +97,7 @@ main {
     max-width: 900px;
 }
 
-/* Tasks section */
+
 .tasks {
     max-width: 900px;
     margin: 2rem auto;
@@ -134,10 +132,10 @@ main {
     margin-right: 1rem;
 }
 
-/* Team grid (max 3 per row) */
+
 .team-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* max 3 in a row */
+    grid-template-columns: repeat(3, 1fr); 
     gap: 1.5rem;
     margin-top: 2rem;
 }
@@ -183,19 +181,18 @@ table th {
     color: white;
 }
 
-/* Mobile navbar behavior */
+
 @media (max-width: 700px) {
     nav li {
-        flex: 1 1 45%; /* 2 in a row */
+        flex: 1 1 45%;
     }
 }
 @media (max-width: 400px) {
     nav li {
-        flex: 1 1 100%; /* full width */
+        flex: 1 1 100%; 
     }
 }
 
-/* Footer (optional if added later) */
 footer {
     text-align: center;
     padding: 1rem;
@@ -204,3 +201,60 @@ footer {
     color: white;
     font-size: 0.9rem;
 }
+
+.zapisnice {
+    list-style: none;
+    padding: 0;
+    max-width: 900px;
+    margin: 2rem auto;
+}
+
+.zapisnice li {
+    background: white;
+    padding: 1.2rem 1.5rem;
+    margin: 0.8rem 0;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.zapisnice a {
+    text-decoration: none;
+    font-weight: bold;
+    color: #0057b7;
+    display: block;
+}
+
+.zapisnice a:hover {
+    text-decoration: underline;
+}
+
+.literature {
+    background: white;
+    padding: 2rem 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    max-width: 900px;
+    margin: 2rem auto;
+}
+
+.literature li {
+    margin-bottom: 0.9rem;
+    padding-left: 0.3rem;
+}
+
+.literature a {
+    color: #0057b7;
+    text-decoration: none;
+}
+
+.literature a:hover {
+    text-decoration: underline;
+}
+
+main h1 {
+    color: #003f7f;
+    margin-bottom: 1.5rem;
+	text-align: center;
+}
+
