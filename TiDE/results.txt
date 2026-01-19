@@ -1,0 +1,15 @@
+
+--- VÝSLEDKY PRE Sínusoida ---
+MAE  (Absolútna chyba):    0.3558
+MSE  (Kvadratická chyba):  0.186135
+
+--- VÝSLEDKY PRE Počasie ---
+MAE  (Absolútna chyba):    1.9535
+MSE  (Kvadratická chyba):  7.490249
+
+--- VÝSLEDKY PRE Akcie (30min) ---
+MAE  (Absolútna chyba):    3.1233
+MSE  (Kvadratická chyba):  13.699384
+
+MAE  (Absolútna chyba):    9.6418
+MSE  (Kvadratická chyba):  122.251047
