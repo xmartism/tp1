@@ -1,0 +1,148 @@
+
+--- VÝSLEDKY PRE M4 Monthly Sample ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000000
+  > Normalizované MAE: 0.000000
+Realita (V jednotkách 'Value'):
+  > MAE:  0.0000
+  > MSE:  0.0000
+  > sMAPE: 9.53 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Sínusoida ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.038895
+  > Normalizované MAE: 0.161024
+Realita (V jednotkách 'Amplitude'):
+  > MAE:  16.1023
+  > MSE:  388.9446
+  > MAPE: 107526.41 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Počasie (Jena) ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.046725
+  > Normalizované MAE: 0.182972
+Realita (V jednotkách 'Teplota (°C)'):
+  > MAE:  3.9525
+  > MSE:  21.8036
+  > MAPE: 135.14 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Akcie AAPL ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.008764
+  > Normalizované MAE: 0.091197
+Realita (V jednotkách 'Cena ($)'):
+  > MAE:  23.5947
+  > MSE:  586.6542
+  > MAPE: 10.31 %
+----------------------------------------
+
+--- VÝSLEDKY PRE M4 Monthly Sample ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000000
+  > Normalizované MAE: 0.000000
+Realita (V jednotkách 'Value'):
+  > MAE:  0.0000
+  > MSE:  0.0000
+  > sMAPE: 7.80 %
+----------------------------------------
+
+--- VÝSLEDKY PRE M4 Monthly Sample ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000000
+  > Normalizované MAE: 0.000000
+Realita (V jednotkách 'Value'):
+  > MAE:  0.0000
+  > MSE:  0.0000
+  > sMAPE: 26.31 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Sínusoida ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.015440
+  > Normalizované MAE: 0.097820
+Realita (V jednotkách 'Amplitude'):
+  > MAE:  9.7820
+  > MSE:  154.4017
+  > MAPE: 10942.49 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Počasie ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.024672
+  > Normalizované MAE: 0.140978
+Realita (V jednotkách 'Teplota (°C)'):
+  > MAE:  6.0040
+  > MSE:  44.7493
+  > MAPE: 218.84 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Akcie AAPL ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.005313
+  > Normalizované MAE: 0.069682
+Realita (V jednotkách 'Cena ($)'):
+  > MAE:  18.0284
+  > MSE:  355.6268
+  > MAPE: 7.89 %
+----------------------------------------
+
+--- VÝSLEDKY PRE M4 Monthly Sample ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000000
+  > Normalizované MAE: 0.000000
+Realita (V jednotkách 'Value'):
+  > MAE:  0.0000
+  > MSE:  0.0000
+  > sMAPE: 13.43 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Sínusoida ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000019
+  > Normalizované MAE: 0.003569
+Realita (V jednotkách 'Amplitude'):
+  > MAE:  0.3569
+  > MSE:  0.1867
+  > MAPE: 2834.71 %
+----------------------------------------
+
+--- VÝSLEDKY: Sínusoida ---
+Benckmark (Normalizované):
+  > MSE: 0.000448 | MAE: 0.016254
+Realita (Jednotky: Amplitude):
+  > MAE: 1.6254 | MSE: 4.4788
+  > MAPE: 6403.09 %
+----------------------------------------
+
+--- VÝSLEDKY PRE M4 Monthly Sample ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000000
+  > Normalizované MAE: 0.000000
+Realita (V jednotkách 'Value'):
+  > MAE:  0.0000
+  > MSE:  0.0000
+  > sMAPE: 19.40 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Sínusoida ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.015440
+  > Normalizované MAE: 0.097820
+Realita (V jednotkách 'Amplitude'):
+  > MAE:  9.7820
+  > MSE:  154.4017
+  > MAPE: 10942.49 %
+----------------------------------------
+
+--- VÝSLEDKY PRE Počasie ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.024672
+  > Normalizované MAE: 0.140978
+Realita (V jednotkách 'Teplota (°C)'):
+  > MAE:  6.0040
+  > MSE:  44.7493
+  > MAPE: 218.84 %
+----------------------------------------
