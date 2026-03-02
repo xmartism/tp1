@@ -1,15 +1,25 @@
+﻿--- VÝSLEDKY PRE Sínusoida ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.000231
+  > Normalizované MAE: 0.012633
+Realita (V jednotkách 'Amplitude'):
+  > MAE:  0.4459
+  > MSE:  0.2874
 
---- VÝSLEDKY PRE Sínusoida ---
-MAE  (Absolútna chyba):    0.3558
-MSE  (Kvadratická chyba):  0.186135
 
 --- VÝSLEDKY PRE Počasie ---
-MAE  (Absolútna chyba):    1.9535
-MSE  (Kvadratická chyba):  7.490249
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.574626
+  > Normalizované MAE: 0.640060
+Realita (V jednotkách 'Teplota (°C)'):
+  > MAE:  3.0101
+  > MSE:  12.7087
 
---- VÝSLEDKY PRE Akcie (30min) ---
-MAE  (Absolútna chyba):    3.1233
-MSE  (Kvadratická chyba):  13.699384
-
-MAE  (Absolútna chyba):    9.6418
-MSE  (Kvadratická chyba):  122.251047
+--- VÝSLEDKY PRE Akcie AAPL (Daily) ---
+Benckmark (Normalizované):
+  > Normalizované MSE: 0.141168
+  > Normalizované MAE: 0.355029
+Realita (V jednotkách 'Cena ($)'):
+  > MAE:  19.3443
+  > MSE:  419.0987
+  > MAPE: 8.45 %
