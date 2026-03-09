@@ -1,0 +1,2 @@
+model_name,output_file,result
+deepAR,Pipeline/outputs/deepAR_output.txt,Model deepAR was evaluated
