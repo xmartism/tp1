@@ -24,67 +24,48 @@ import tensorflow as tf
 
 
 DATA_DIR = 'gs://time_series_datasets'
-LOCAL_CACHE_DIR = './dataset/'
+LOCAL_CACHE_DIR = 'dataset/'
 
 
 class TSFDataLoader:
   """Generate data loader from raw data."""
 
   def __init__(
-      self, data, batch_size, seq_len, pred_len, feature_type, target='OT'
+    self, train_path, val_path, test_path, batch_size, seq_len, pred_len, target, date_col,
   ):
-    self.data = data
     self.batch_size = batch_size
     self.seq_len = seq_len
     self.pred_len = pred_len
-    self.feature_type = feature_type
     self.target = target
+    self.date_col = date_col
     self.target_slice = slice(0, None)
 
-    self._read_data()
+    self._read_data(train_path, val_path, test_path)
 
-  def _read_data(self):
-    """Load raw data and split datasets."""
+  def _load_csv(self, path: str) -> pd.DataFrame:
+    """Load CSV, removes column with date and returns DataFrame."""
+    df = pd.read_csv(path)
+    if self.date_col in df.columns:
+      df = df.drop(columns=[self.date_col])
+    df = df.select_dtypes(include=[np.number])
+    return df
 
-    # copy data from cloud storage if not exists
-    if not os.path.isdir(LOCAL_CACHE_DIR):
-      os.mkdir(LOCAL_CACHE_DIR)
+  def _read_data(self, train_path, val_path, test_path):
+    """Load and scales data."""
+    train_df = self._load_csv(train_path)
+    val_df = self._load_csv(val_path)
+    test_df = self._load_csv(test_path)
 
-    file_name = self.data + '.csv'
-    cache_filepath = os.path.join(LOCAL_CACHE_DIR, file_name)
-    if not os.path.isfile(cache_filepath):
-      tf.io.gfile.copy(
-          os.path.join(DATA_DIR, file_name), cache_filepath, overwrite=True
-      )
-
-    df_raw = pd.read_csv(cache_filepath)
-
-    # S: univariate-univariate, M: multivariate-multivariate, MS:
-    # multivariate-univariate
-    df = df_raw.set_index('date')
-    if self.feature_type == 'S':
-      df = df[[self.target]]
-    elif self.feature_type == 'MS':
-      target_idx = df.columns.get_loc(self.target)
-      self.target_slice = slice(target_idx, target_idx + 1)
-
-    # split train/valid/test
-    n = len(df)
-    if self.data.startswith('ETTm'):
-      train_end = 12 * 30 * 24 * 4
-      val_end = train_end + 4 * 30 * 24 * 4
-      test_end = val_end + 4 * 30 * 24 * 4
-    elif self.data.startswith('ETTh'):
-      train_end = 12 * 30 * 24
-      val_end = train_end + 4 * 30 * 24
-      test_end = val_end + 4 * 30 * 24
+    if self.target in train_df.columns:
+        target_idx = train_df.columns.get_loc(self.target)
+        self.target_slice = slice(target_idx, target_idx + 1)
     else:
-      train_end = int(n * 0.7)
-      val_end = n - int(n * 0.2)
-      test_end = n
-    train_df = df[:train_end]
-    val_df = df[train_end - self.seq_len : val_end]
-    test_df = df[val_end - self.seq_len : test_end]
+        raise ValueError(
+            f"Cieľový stĺpec '{self.target}' nebol nájdený v dátach. "
+            f"Dostupné stĺpce: {list(train_df.columns)}"
+        )
+
+    self.n_feature = train_df.shape[1]
 
     # standardize by training set
     self.scaler = StandardScaler()
@@ -97,7 +78,7 @@ class TSFDataLoader:
     self.train_df = scale_df(train_df, self.scaler)
     self.val_df = scale_df(val_df, self.scaler)
     self.test_df = scale_df(test_df, self.scaler)
-    self.n_feature = self.train_df.shape[-1]
+    # self.n_feature = self.train_df.shape[-1] //
 
   def _split_window(self, data):
     inputs = data[:, : self.seq_len, :]
@@ -130,5 +111,5 @@ class TSFDataLoader:
   def get_val(self):
     return self._make_dataset(self.val_df, shuffle=False)
 
-  def get_test(self):
-    return self._make_dataset(self.test_df, shuffle=False)
+  def get_test(self, shuffle = False):
+    return self._make_dataset(self.test_df, shuffle=shuffle)

@@ -4,10 +4,36 @@ Authors: Si-An Chen, Chun-Liang Li, Nate Yoder, Sercan Arik and Tomas Pfister
 
 Paper link: TBA
 
-## Repository Organization
-This repository contains two variants of TSMixer:
-1. `tsmixer_basic`: The basic version of TSMixer, used for multivariate long-term forecasting tasks such as ETT, Weather, Electricity, Traffic.
-2. `tsmixer_extended` (TBD): TSMixer that leveraging auxiliary information (static features and future features), used for M5.
+# TSMixer for Multivariate Long-Term Forecasting
 
-## Usage
-Please check README in subdirectories for installation guides and training examples.
+## Installation
+Install the dependencies:
+```
+pip install -r requirements.txt
+```
+
+## Data Preparation
+We use pre-processed datasets provided in [Autoformer](https://github.com/thuml/Autoformer).
+```
+mkdir dataset
+cd dataset
+# Download zip file from [Google Drive](https://drive.google.com/corp/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy) and put it under dataset/
+unzip all_six_datasets.zip
+mv all_six_datasets/*/*.csv ./
+```
+
+## Training Example
+Use `run_tuned_hparam.sh` to reproduce results of 96 prediction length.
+```
+sh run_tuned_hparam.sh ETTm2
+sh run_tuned_hparam.sh weather
+sh run_tuned_hparam.sh electricity
+sh run_tuned_hparam.sh traffic
+```
+Please check Appendix in our paper for the best hyperparameters tuned in other settings.
+
+
+## Acknowledgement
+We appreciate the following github repos for their valuable code base or datasets:
+1. [Are Transformers Effective for Time Series Forecasting?](https://github.com/cure-lab/LTSF-Linear)
+2. [Autoformer](https://github.com/thuml/Autoformer)
