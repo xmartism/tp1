@@ -5,14 +5,14 @@ Rozdeli dataset (70/15/15) a postupne spusti vsetky modely.
 Vystupy: Pipeline/outputs/<model>_output.txt, <results-file>
 
 Parametre:
-  --dataset       (povinny)  cesta k CSV datasetu
-  --target        (povinny)  nazov cieloveho stlpca
-  --date          (default: "date")  nazov stlpca s datumom
-  --horizon       (povinny)  pocet krokov predikcie
-  --results-file  (default: results.csv)  vystupny subor s vysledkami
+--dataset       (povinny)  cesta k CSV datasetu
+--target        (povinny)  nazov cieloveho stlpca
+--date          (default: "date")  nazov stlpca s datumom
+--horizon       (povinny)  pocet krokov predikcie
+--results-file  (default: results.csv)  vystupny subor s vysledkami
 
 Priklad:
-    python3 Pipeline/pipeline.py --dataset data/weatherHistory.csv --target "Temperature (C)" --date "Formatted Date" --horizon 24 --results-file Pipeline/outputs/results.csv
+python3 Pipeline/pipeline.py --dataset data/weatherHistory.csv --target "Temperature (C)" --date "Formatted Date" --horizon 24 --results-file Pipeline/outputs/results.csv
 """
 
 import argparse
@@ -29,18 +29,18 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 MODELS = [
-    {
-        "name": "deepAR",
-        "script": "Models/DeepAR/deepAR.py",
-    },
+    #{
+    #    "name": "deepAR",
+    #    "script": "Models/DeepAR/deepAR.py",
+    #},
     # {
     #     "name": "transformer",
     #     "script": "Models/Transformer/transformer.py",
     # },
-    # {
-    #     "name": "nbeats",
-    #     "script": "Models/NBeats/nbeats.py",
-    # },
+    {
+        "name": "nbeats",
+         "script": "Models/NBeats/NBeats.py",
+    },
     # {
     #     "name": "tft",
     #     "script": "Models/TFT/tft.py",
@@ -222,8 +222,8 @@ def main():
     parser.add_argument("--target",       required=True, help="Target column name")
     parser.add_argument("--date",         default="date", help="Date column name (default: date)")
     parser.add_argument("--horizon",      type=int, required=True, help="Forecast horizon")
-    parser.add_argument("--results-file", default="results.csv",
-                        help="Path to results CSV (default: results.csv)")
+    parser.add_argument("--results-file", default="Pipeline/results.csv",
+                        help="Path to results CSV")
 
     args = parser.parse_args()
 

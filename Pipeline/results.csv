@@ -1,2 +1,2 @@
-model_name,output_file,result
-deepAR,Pipeline/outputs/deepAR_output.txt,Model deepAR was evaluated
+model_name,MAPE,MAE,MSE,output_file
+nbeats,3.48112092773425,0.74572331474783,0.6369704032708137,Pipeline\outputs\nbeats_output.txt
