@@ -11,22 +11,29 @@ data_dict = {
 
 
 def data_provider(args, flag):
-    Data = data_dict[args.data]
+    Data = data_dict['custom']
     timeenc = 0 if args.embed != 'timeF' else 1
     train_only = args.train_only
+    name = None
 
     if flag == 'test':
         shuffle_flag = False
         drop_last = False
         batch_size = args.batch_size
         freq = args.freq
+        name = args.test_dataset
     elif flag == 'pred':
         shuffle_flag = False
         drop_last = False
         batch_size = 1
         freq = args.freq
         Data = Dataset_Pred
+        name = args.test_dataset
     else:
+        if flag == 'val':
+            name = args.val_dataset
+        if flag == 'train':
+            name = args.train_dataset
         shuffle_flag = True
         drop_last = True
         batch_size = args.batch_size
@@ -34,14 +41,15 @@ def data_provider(args, flag):
 
     data_set = Data(
         root_path=args.root_path,
-        data_path=args.data_path,
+        data_path=name,
         flag=flag,
-        size=[args.seq_len, args.label_len, args.pred_len],
+        size=[args.seq_len, args.label_len, args.horizon],
         features=args.features,
         target=args.target,
         timeenc=timeenc,
         freq=freq,
-        train_only=train_only
+        train_only=train_only,
+        date=args.date
     )
     print(flag, len(data_set))
     data_loader = DataLoader(

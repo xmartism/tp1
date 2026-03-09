@@ -45,10 +45,10 @@ MODELS = [
     #     "name": "tft",
     #     "script": "Models/TFT/tft.py",
     # },
-    # {
-    #     "name": "lstm",
-    #     "script": "Models/LSTM/lstm.py",
-    # },
+    {
+        "name": "lstm",
+        "script": "Models/LTSF-Linear/run_longExp.py",
+    },
 ]
 
 TRAIN_RATIO = 0.70
@@ -170,6 +170,7 @@ def run_pipeline(args):
             "--date",          args.date,
             "--horizon",       str(args.horizon),
             "--output",        output_file,
+            "--freq", 'h'
         ]
 
         success = run_command(model_cmd, f"[{name}] Training & Prediction")
