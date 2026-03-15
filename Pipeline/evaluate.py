@@ -1,59 +1,84 @@
-"""
-Real Evaluation Script
-
-Číta výstupy z modelov (MAPE, MAE, MSE) a ukladá ich do spoločného CSV.
-"""
-
 import argparse
-import csv
+import json
+import pandas as pd
+import numpy as np
 from pathlib import Path
+import sys
+
+def calculate_metrics(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+
+    # Mean Squared Error
+    mse = np.mean((y_true - y_pred) ** 2)
+    # Mean Absolute Error
+    mae = np.mean(np.abs(y_true - y_pred))
+
+    # Mean Absolute Percentage Error (s ochranou proti deleniu nulou)
+    # np.where nahradi nuly velmi malym cislom, aby sme predisli chybe Infinity
+    mape = np.mean(np.abs((y_true - y_pred) / np.where(y_true == 0, 1e-8, y_true))) * 100
+
+    return mse, mae, mape
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name", required=True, help="Name of the model being evaluated")
-    parser.add_argument("--output-file", required=True, help="Path to the model output file")
-    parser.add_argument("--results-file", required=True, help="Path to the results CSV file")
+    parser = argparse.ArgumentParser(description="Evaluate model predictions")
+    parser.add_argument("--model-name", required=True)
+    parser.add_argument("--output-file", required=True)
+    parser.add_argument("--results-file", required=True)
+
+    # Pridané argumenty pre načítanie skutočných dát
+    parser.add_argument("--test-dataset", required=True)
+    parser.add_argument("--target", required=True)
+    parser.add_argument("--horizon", type=int, required=True)
+
     args = parser.parse_args()
 
-    # Predvolené hodnoty, ak by sa v texte nenašli
-    mape_val = "N/A"
-    mae_val = "N/A"
-    mse_val = "N/A"
+    # 1. Načítanie predikcií
+    # Tvoj výstup vyzerá ako Python/JSON zoznam, takže json.load to bez problémov prečíta
+    try:
+        with open(args.output_file, 'r') as f:
+            predictions = json.load(f)
+    except Exception as e:
+        print(f"[ERROR] Nepodarilo sa načítať predikcie z {args.output_file}: {e}")
+        sys.exit(1)
 
-    # 1. Čítanie textového výstupu z modelu
-    output_path = Path(args.output_file)
-    if output_path.exists():
-        with open(output_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("MAPE:"):
-                    mape_val = line.split(":", 1)[1].strip()
-                elif line.startswith("MAE:"):
-                    mae_val = line.split(":", 1)[1].strip()
-                elif line.startswith("MSE:"):
-                    mse_val = line.split(":", 1)[1].strip()
-    else:
-        print(f"[WARN] Súbor {args.output_file} neexistuje. Metriky nebudú načítané.")
+    # 2. Načítanie skutočných hodnôt z testovacieho datasetu
+    try:
+        df_test = pd.read_csv(args.test_dataset)
+        # Zoberieme len prvých X riadkov (podľa horizontu) z cieľového stĺpca
+        actuals = df_test[args.target].iloc[:args.horizon].tolist()
+    except Exception as e:
+        print(f"[ERROR] Nepodarilo sa načítať testovacie dáta: {e}")
+        sys.exit(1)
 
-    print(f"[{args.model_name.upper()}] Evaluácia: MAPE={mape_val}, MAE={mae_val}, MSE={mse_val}")
+    # Bezpečnostná kontrola dĺžky
+    if len(predictions) != len(actuals):
+        print(f"[ERROR] Dĺžka predikcií ({len(predictions)}) sa nezhoduje s horizontom ({len(actuals)}) pre {args.model_name}!")
+        sys.exit(1)
 
-    # 2. Zápis do spoločného CSV súboru
+    # 3. Výpočet metrík
+    mse, mae, mape = calculate_metrics(actuals, predictions)
+
+    # 4. Uloženie do results.csv
     results_path = Path(args.results_file)
+    results_path.parent.mkdir(parents=True, exist_ok=True) # Pre istotu vytvorí zložku
 
-    # Skontrolujeme, či súbor existuje a či nie je prázdny
-    file_exists = results_path.exists() and results_path.stat().st_size > 0
+    # Vytvoríme DataFrame s jedným riadkom
+    df_new = pd.DataFrame([{
+        "Model": args.model_name,
+        "Horizon": args.horizon,
+        "MSE": round(mse, 4),
+        "MAE": round(mae, 4),
+        "MAPE (%)": round(mape, 4)
+    }])
 
-    with open(results_path, "a", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
+    # Ak už súbor existuje, pripojíme nový riadok, inak vytvoríme nový súbor s hlavičkou
+    if results_path.exists():
+        df_new.to_csv(results_path, mode='a', header=False, index=False)
+    else:
+        df_new.to_csv(results_path, mode='w', header=True, index=False)
 
-        # Ak súbor neexistoval, zapíšeme najskôr hlavičku (názvy stĺpcov)
-        if not file_exists:
-            writer.writerow(["model_name", "MAPE", "MAE", "MSE", "output_file"])
-
-        # Zapíšeme konkrétne výsledky modelu
-        writer.writerow([args.model_name, mape_val, mae_val, mse_val, args.output_file])
-
-    print(f"Výsledky úspešne zapísané do {args.results_file}")
+    print(f"  [EVAL] {args.model_name} -> MSE: {mse:.4f} | MAE: {mae:.4f} | MAPE: {mape:.2f}%")
 
 if __name__ == "__main__":
     main()

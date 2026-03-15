@@ -29,10 +29,10 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 MODELS = [
-    #{
-    #    "name": "deepAR",
-    #    "script": "Models/DeepAR/deepAR.py",
-    #},
+    {
+        "name": "deepAR",
+        "script": "Models/DeepAR/deepAR.py",
+    },
     # {
     #     "name": "transformer",
     #     "script": "Models/Transformer/transformer.py",
@@ -188,9 +188,12 @@ def run_pipeline(args):
         # ------------------------------------------------------------------
         eval_cmd = [
             sys.executable, "Pipeline/evaluate.py",
-            "--model-name",   name,
-            "--output-file",  output_file,
+            "--model-name", name,
+            "--output-file", output_file,
             "--results-file", str(results_file),
+            "--test-dataset", str(test_path),  # PRIDANÉ
+            "--target", args.target,  # PRIDANÉ
+            "--horizon", str(args.horizon)  # PRIDANÉ
         ]
 
         success = run_command(eval_cmd, f"[{name}] Evaluation")
