@@ -3,10 +3,10 @@ import glob
 import logging
 import os
 import time
-
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import json
 
 # Lokálny data_loader (nová verzia prijímajúca cesty k CSV)
 from data_loader import TSFDataLoader
@@ -137,13 +137,15 @@ def main():
     all_preds  = np.concatenate(all_preds,  axis=0)
     all_actual = np.concatenate(all_actual, axis=0)
 
-    preds_flat  = all_preds[:, 0, 0]
-    actual_flat = all_actual[:, 0, 0]
+    preds_flat = all_preds[-1, :, 0].tolist()
+    # actual_flat = all_actual[:, 0, 0]
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    out_df = pd.DataFrame({"actual": actual_flat, "predicted": preds_flat})
-    out_df.to_csv(args.output, index=False)
-    print(f"[TSMixer] Predikcie uložené do: {args.output}  ({len(out_df)} riadkov)")
+    with open(args.output, "w") as f:
+        json.dump(preds_flat, f)
+    # out_df = pd.DataFrame({"actual": actual_flat, "predicted": preds_flat})
+    # out_df.to_csv(args.output, index=False)
+    print(f"[TSMixer] Predikcie uložené do: {args.output}")
 
     for f in glob.glob(ckpt_path + "*"):
         os.remove(f)
