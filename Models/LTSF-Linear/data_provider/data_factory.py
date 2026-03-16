@@ -28,7 +28,7 @@ def data_provider(args, flag):
         batch_size = 1
         freq = args.freq
         Data = Dataset_Pred
-        name = args.test_dataset
+        name = args.val_dataset
     else:
         if flag == 'val':
             name = args.val_dataset
@@ -52,6 +52,7 @@ def data_provider(args, flag):
         date=args.date
     )
     print(flag, len(data_set))
+
     data_loader = DataLoader(
         data_set,
         batch_size=batch_size,

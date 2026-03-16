@@ -221,23 +221,51 @@ class Dataset_Custom(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
-        self.scaler = StandardScaler()
+        # self.scaler = StandardScaler()
+        #
+        # df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
+        #
+        # cols = list(df_raw.columns)
+        # if self.features == 'S':
+        #     cols.remove(self.target)
+        # cols.remove(self.date)
+        #
+        # if self.features in ['M', 'MS']:
+        #     df_raw = df_raw[[self.date] + cols]
+        #     cols_data = df_raw.columns[1:]
+        #     df_data = df_raw[cols_data]
+        #
+        # elif self.features == 'S':
+        #     df_raw = df_raw[[self.date] + cols + [self.target]]
+        #     df_data = df_raw[[self.target]]
+        #
+        # df_data = df_data.apply(pd.to_numeric, errors='coerce').fillna(0)
 
+        self.scaler = StandardScaler()
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
 
-        cols = list(df_raw.columns)
+        # 1. Ensure the date column is handled separately
+        df_stamp = df_raw[[self.date]]
+        df_stamp[self.date] = pd.to_datetime(df_stamp[self.date])
+
+        # 2. Drop the date column from the numeric search
+        # 3. Select ONLY numeric columns (int and float)
+        df_numeric = df_raw.drop(columns=[self.date]).select_dtypes(include=[np.number])
+
         if self.features == 'S':
-            cols.remove(self.target)
-        cols.remove(self.date)
+            # Univariate: only keep the target column
+            df_data = df_numeric[[self.target]]
+        elif self.features == 'MS':
+            # Multivariate to Univariate: keep all numeric features
+            # (Ensures target is included in the features)
+            df_data = df_numeric
+        elif self.features == 'M':
+            # Multivariate: keep all numeric features
+            df_data = df_numeric
 
-        if self.features in ['M', 'MS']:
-            df_raw = df_raw[[self.date] + cols]
-            cols_data = df_raw.columns[1:]
-            df_data = df_raw[cols_data]
 
-        elif self.features == 'S':
-            df_raw = df_raw[[self.date] + cols + [self.target]]
-            df_data = df_raw[[self.target]]
+        self.df_data = df_data
+
 
         if self.scale:
             self.scaler.fit(df_data.values)
@@ -284,7 +312,7 @@ class Dataset_Custom(Dataset):
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
-    
+
 
 class Dataset_Pred(Dataset):
     def __init__(self, root_path, flag='pred', size=None,
@@ -320,26 +348,28 @@ class Dataset_Pred(Dataset):
 
         df_raw = pd.read_csv(os.path.join(self.root_path, self.data_path))
 
-        if self.cols:
-            cols = self.cols.copy()
-        else:
-            cols = list(df_raw.columns)
-            self.cols = cols.copy()
-            cols.remove(self.date)
+        # 1. Handle the date separately first
+        df_stamp_raw = df_raw[[self.date]]
 
-        if self.features == 'S':
-            cols.remove(self.target)
+        # 2. Get ONLY numeric columns from the start
+        # This automatically drops strings, IDs, or malformed data
+        df_numeric = df_raw.drop(columns=[self.date]).select_dtypes(include=[np.number])
 
-        border1 = len(df_raw) - self.seq_len
-        border2 = len(df_raw)
+        # 3. Ensure the target is handled and present
+        if self.target not in df_numeric.columns and self.features != 'S':
+            # If target isn't numeric, we try to force it, otherwise we have a problem
+            df_raw[self.target] = pd.to_numeric(df_raw[self.target], errors='coerce')
+            df_numeric[self.target] = df_raw[self.target]
 
-        if self.features in ['M','MS']:
-            df_raw = df_raw[[self.date] + cols]
-            df_data = df_raw[df_raw.columns[1:]]
-
+        if self.features in ['M', 'MS']:
+            df_data = df_numeric
         elif self.features == 'S':
-            df_raw = df_raw[[self.date] + cols + [self.target]]
-            df_data = df_raw[[self.target]]
+            df_data = df_numeric[[self.target]]
+
+        self.df_data = df_data
+
+        # Fill any NaNs that might have been created by malformed data
+        df_data = df_data.fillna(0)
 
         if self.scale:
             self.scaler.fit(df_data.values)
@@ -347,7 +377,11 @@ class Dataset_Pred(Dataset):
         else:
             data = df_data.values
 
-        tmp_stamp = df_raw[[self.date]][border1:border2]
+        # --- Time Stamping Logic ---
+        border1 = len(df_raw) - self.seq_len
+        border2 = len(df_raw)
+
+        tmp_stamp = df_stamp_raw[border1:border2]
         tmp_stamp[self.date] = pd.to_datetime(tmp_stamp[self.date])
 
         pred_dates = pd.date_range(
@@ -357,8 +391,8 @@ class Dataset_Pred(Dataset):
         )
 
         df_stamp = pd.DataFrame({self.date:
-            list(tmp_stamp[self.date].values) + list(pred_dates[1:])
-        })
+                                     list(tmp_stamp[self.date].values) + list(pred_dates[1:])
+                                 })
 
         self.future_dates = list(pred_dates[1:])
 
@@ -368,15 +402,13 @@ class Dataset_Pred(Dataset):
             df_stamp['weekday'] = df_stamp[self.date].apply(lambda x: x.weekday())
             df_stamp['hour'] = df_stamp[self.date].apply(lambda x: x.hour)
             df_stamp['minute'] = df_stamp[self.date].apply(lambda x: x.minute)
-            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x//15)
-
+            df_stamp['minute'] = df_stamp['minute'].map(lambda x: x // 15)
             data_stamp = df_stamp.drop([self.date], axis=1).values
-
         else:
             data_stamp = time_features(
                 pd.to_datetime(df_stamp[self.date].values),
                 freq=self.freq
-            ).transpose(1,0)
+            ).transpose(1, 0)
 
         self.data_x = data[border1:border2]
 

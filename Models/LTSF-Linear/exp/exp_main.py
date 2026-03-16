@@ -22,6 +22,18 @@ warnings.filterwarnings('ignore')
 
 class Exp_Main(Exp_Basic):
     def __init__(self, args):
+        # 1. Temporarily get the data to see how many columns we have
+        # We do this BEFORE super().__init__ because super calls _build_model
+        temp_data, _ = data_provider(args, flag='train')
+
+        # 2. Update the args dynamically
+        # .shape[1] gives the number of columns in your processed df_data
+        num_features = temp_data.data_x.shape[1]
+        args.enc_in = num_features
+        args.dec_in = num_features
+
+        print(f"--- Dynamic Dimension Check: Found {num_features} features ---")
+
         super(Exp_Main, self).__init__(args)
 
     def _build_model(self):
@@ -53,6 +65,7 @@ class Exp_Main(Exp_Basic):
 
     def vali(self, vali_data, vali_loader, criterion):
         total_loss = []
+        f_dim = vali_data.df_data.columns.get_loc(self.args.target)
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
@@ -83,9 +96,8 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, -self.args.horizon:, f_dim:]
-                batch_y = batch_y[:, -self.args.horizon:, f_dim:].to(self.device)
+                outputs = outputs[:, -self.args.horizon:, f_dim:f_dim + 1]
+                batch_y = batch_y[:, -self.args.horizon:, f_dim:f_dim + 1].to(self.device)
 
                 pred = outputs.detach().cpu()
                 true = batch_y.detach().cpu()
@@ -99,6 +111,7 @@ class Exp_Main(Exp_Basic):
 
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
+        f_dim = train_data.df_data.columns.get_loc(self.args.target)
         if not self.args.train_only:
             vali_data, vali_loader = self._get_data(flag='val')
 
@@ -147,9 +160,8 @@ class Exp_Main(Exp_Basic):
                             else:
                                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
-                        f_dim = -1 if self.args.features == 'MS' else 0
-                        outputs = outputs[:, -self.args.horizon:, f_dim:]
-                        batch_y = batch_y[:, -self.args.horizon:, f_dim:].to(self.device)
+                        outputs = outputs[:, -self.args.horizon:, f_dim:f_dim + 1]
+                        batch_y = batch_y[:, -self.args.horizon:, f_dim:f_dim + 1].to(self.device)
                         loss = criterion(outputs, batch_y)
                         train_loss.append(loss.item())
                 else:
@@ -162,9 +174,8 @@ class Exp_Main(Exp_Basic):
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, batch_y)
                     # print(outputs.shape,batch_y.shape)
-                    f_dim = -1 if self.args.features == 'MS' else 0
-                    outputs = outputs[:, -self.args.horizon:, f_dim:]
-                    batch_y = batch_y[:, -self.args.horizon:, f_dim:].to(self.device)
+                    outputs = outputs[:, -self.args.horizon:, f_dim:f_dim + 1]
+                    batch_y = batch_y[:, -self.args.horizon:, f_dim:f_dim + 1].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
 
@@ -303,6 +314,7 @@ class Exp_Main(Exp_Basic):
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
+        target_index = pred_data.df_data.columns.get_loc(self.args.target)
 
         if load:
             path = os.path.join(self.args.checkpoints, setting)
@@ -320,64 +332,56 @@ class Exp_Main(Exp_Basic):
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
                 # decoder input
-                dec_inp = torch.zeros([batch_y.shape[0], self.args.horizon, batch_y.shape[2]]).float().to(batch_y.device)
+                dec_inp = torch.zeros([batch_y.shape[0], self.args.horizon, batch_y.shape[2]]).float().to(
+                    batch_y.device)
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-                # encoder - decoder
-                if self.args.use_amp:
-                    with torch.cuda.amp.autocast():
-                        if 'Linear' in self.args.model:
-                            outputs = self.model(batch_x)
-                        else:
-                            if self.args.output_attention:
-                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-                            else:
-                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+
+                if 'Linear' in self.args.model:
+                    outputs = self.model(batch_x)
                 else:
-                    if 'Linear' in self.args.model:
-                        outputs = self.model(batch_x)
+                    if self.args.output_attention:
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                     else:
-                        if self.args.output_attention:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-                        else:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                pred = outputs.detach().cpu().numpy()  # .squeeze()
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+
+                # --- KEY ADDITION: SLICE FOR MS TASK ---
+                # This mirrors the logic in your train() and vali() functions
+                # SLICE DYNAMICALLY
+                # Instead of -1, we use the specific index found above
+                outputs = outputs[:, -self.args.horizon:, target_index:target_index + 1]
+
+                pred = outputs.detach().cpu().numpy()
                 preds.append(pred)
 
         preds = np.array(preds)
         preds = np.concatenate(preds, axis=0)
+
+        # 1. Process predictions (preds[0] is now [24, 1])
         if (pred_data.scale):
-            preds = pred_data.inverse_transform(preds)
-        
-        # result save
-        # folder_path = './results/' + setting + '/'
-        # if not os.path.exists(folder_path):
-        #     os.makedirs(folder_path)
+            real_preds = pred_data.inverse_transform(preds[0])
+        else:
+            real_preds = preds[0]
 
-        #np.save(folder_path + 'real_prediction.npy', preds)
-        
-        # ORIGINAL
-        # pd.DataFrame(np.append(np.transpose([pred_data.future_dates]), preds[0], axis=1), columns=pred_data.cols).to_csv(folder_path + 'real_prediction.csv', index=False)
+        # Flatten now safely results in 24 values because we sliced to 1 dimension above
+        final_values = real_preds.flatten()
+        horizon = len(final_values)
 
-        # make sure dates are a column vector
-        dates = np.array(pred_data.future_dates).reshape(-1, 1)
+        # 2. Align the dates
+        all_dates = list(pred_data.future_dates)
+        matched_dates = all_dates[-horizon:]
 
-        # make sure predictions are 2D
-        # pred_values = np.array(preds[0]).reshape(-1, 1)
-        #
-        # # combine into one array
-        # data = np.hstack([dates, pred_values])
-        #
-        # # create DataFrame with two columns: 'date' and the target
-        # df_predictions = pd.DataFrame(
-        #     data,
-        #     columns=[self.args.date, pred_data.target]
-        # )
-        #
-        # df_predictions.to_csv(str(self.args.output), index=False)
+        # 3. CONSOLE: Print as a nice DataFrame
+        df_console = pd.DataFrame({
+            'date': matched_dates,
+            self.args.target: final_values
+        })
 
-        pred_values = np.array(preds[0]).flatten().tolist()
+        print(f"\n>>>> Forecast for next {horizon} steps <<<<")
+        print(df_console.to_string(index=False))
 
+        # 4. FILE: Write as a raw array/list
         with open(self.args.output, "w") as f:
-            f.write(str(pred_values))
+            f.write(str(final_values.tolist()))
 
+        print(f"\nRaw array saved to: {self.args.output}")
         return

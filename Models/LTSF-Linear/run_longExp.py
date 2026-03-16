@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--data', type=str, required=False, default='custom', help='dataset type')
     parser.add_argument('--root_path', type=str, required=False, default='./', help='root path of the data file')
     parser.add_argument('--dataset', type=str, required=False, default='', help='data file')
-    parser.add_argument('--features', required=False, type=str, default='S',
+    parser.add_argument('--features', required=False, type=str, default='MS',
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
     parser.add_argument('--target', required=False, type=str, default='OT', help='target feature in S or MS task')
     parser.add_argument('--freq', required=False, type=str, default='h',
@@ -47,8 +47,8 @@ def main():
     # Formers
     parser.add_argument('--embed_type', type=int, default=0, help='0: default 1: value embedding + temporal embedding + positional embedding 2: value embedding + temporal embedding 3: value embedding + positional embedding 4: value embedding')
     parser.add_argument('--enc_in', type=int, default=8, help='encoder input size') # DLinear with --individual, use this hyperparameter as the number of channels
-    parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
-    parser.add_argument('--c_out', type=int, default=7, help='output size')
+    parser.add_argument('--dec_in', type=int, default=8, help='decoder input size')
+    parser.add_argument('--c_out', type=int, default=1, help='output size')
     parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
     parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
     parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
@@ -72,7 +72,7 @@ def main():
     parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=4, help='early stopping patience')
-    parser.add_argument('--learning_rate', type=float, default=0.005, help='optimizer learning rate')
+    parser.add_argument('--learning_rate', type=float, default=0.01, help='optimizer learning rate')
     parser.add_argument('--des', type=str, default='Exp', help='exp description')
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
@@ -87,6 +87,7 @@ def main():
 
     args = parser.parse_args()
     args.do_predict = True
+    args.individual = True
 
     args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
