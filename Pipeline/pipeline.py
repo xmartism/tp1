@@ -45,10 +45,10 @@ MODELS = [
         "name": "tsmixer",
         "script": "Models/tsmixer/tsmixer.py",
     },
-    # {
-    #     "name": "tft",
-    #     "script": "Models/TFT/tft.py",
-    # },
+    {
+        "name": "tft",
+        "script": "Models/TFT/tft.py",
+    },
     {
         "name": "lstm",
         "script": "Models/LTSF-Linear/run_longExp.py",
