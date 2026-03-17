@@ -1,0 +1,3 @@
+Model,Horizon,MSE,MAE,MAPE (%)
+nbeats,24,0.1793,0.3202,2.322
+tft,24,3.3955,1.3843,10.0904

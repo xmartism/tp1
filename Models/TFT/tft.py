@@ -94,7 +94,7 @@ def main():
         num_attention_heads=4,
         dropout=0.1,
         batch_size=32,
-        n_epochs=3,  # Nastavené na 3 pre rýchlosť pipeline, podobne ako N-BEATS
+        n_epochs=2,  # Nastavené na 3 pre rýchlosť pipeline, podobne ako N-BEATS
         add_relative_index=True,  # Dôležité pre TFT, ak nepoužívame iné statické kovariáty
         random_state=42,
         pl_trainer_kwargs={
