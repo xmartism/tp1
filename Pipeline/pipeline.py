@@ -22,6 +22,7 @@ import tempfile
 from pathlib import Path
 
 import pandas as pd
+import time
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +177,9 @@ def run_pipeline(args):
             "--output",        output_file,
         ]
 
+        start_time = time.time()
         success = run_command(model_cmd, f"[{name}] Training & Prediction")
+        train_time = time.time() - start_time
 
         if not success:
             print(f"[WARN] Skipping evaluation for '{name}' due to model failure.")
@@ -191,9 +194,11 @@ def run_pipeline(args):
             "--model-name", name,
             "--output-file", output_file,
             "--results-file", str(results_file),
-            "--test-dataset", str(test_path),  # PRIDANÉ
-            "--target", args.target,  # PRIDANÉ
-            "--horizon", str(args.horizon)  # PRIDANÉ
+            "--test-dataset", str(test_path),
+            "--target", args.target,
+            "--horizon", str(args.horizon),
+            "--dataset-name", Path(args.dataset).name,
+            "--train-time", str(train_time)
         ]
 
         success = run_command(eval_cmd, f"[{name}] Evaluation")
