@@ -2,17 +2,25 @@
 Forecasting Pipeline
 
 Rozdeli dataset (70/15/15) a postupne spusti vsetky modely.
-Vystupy: Pipeline/outputs/<model>_output.txt, <results-file>
+Vystupy: Pipeline/outputs/<experiment_id>/<model>_output.json, Pipeline/outputs/<experiment_id>/results.csv, Pipeline/outputs/experiments.csv
 
 Parametre:
 --dataset       (povinny)  cesta k CSV datasetu
 --target        (povinny)  nazov cieloveho stlpca
 --date          (default: "date")  nazov stlpca s datumom
 --horizon       (povinny)  pocet krokov predikcie
---results-file  (default: results.csv)  vystupny subor s vysledkami
+--output-dir    (default: Pipeline/outputs)  priecinok pre vystupy tohto behu
 
-Priklad:
-python3 Pipeline/pipeline.py --dataset data/weatherHistory.csv --target "Temperature (C)" --date "Formatted Date" --horizon 24 --results-file Pipeline/outputs/results.csv
+Priklad (priamo):
+python3 Pipeline/pipeline.py \
+    --dataset data/weatherHistory.csv \
+    --target "Temperature (C)" \
+    --date "Formatted Date" \
+    --horizon 24 \
+    --output-dir Pipeline/outputs/1
+
+Priklad (cez run_experiments.py - odporucane):
+python3 Pipeline/run_experiments.py
 """
 
 import argparse
@@ -139,18 +147,14 @@ def run_command(cmd: list[str], step_label: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def run_pipeline(args):
-    results_file = Path(args.results_file)
-
-    if results_file.exists():
-        results_file.unlink()
-        print(f"[INFO] Cleared existing results file: {results_file}")
 
     # Split once - all models share the same splits
     train_path, val_path, test_path = split_dataset(args.dataset, args.date)
 
     # Ensure output directory exists
-    output_dir = Path("Pipeline/outputs")
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    results_file = output_dir / "results.csv"
 
     failed_models = []
 
@@ -234,8 +238,8 @@ def main():
     parser.add_argument("--target",       required=True, help="Target column name")
     parser.add_argument("--date",         default="date", help="Date column name (default: date)")
     parser.add_argument("--horizon",      type=int, required=True, help="Forecast horizon")
-    parser.add_argument("--results-file", default="Pipeline/results.csv",
-                        help="Path to results CSV")
+    parser.add_argument("--output-dir",   default="Pipeline/outputs",
+                        help="Directory for model outputs and results (default: Pipeline/outputs)")
 
     args = parser.parse_args()
 
