@@ -59,7 +59,7 @@ MODELS = [
         "script": "Models/TFT/tft.py",
     },
     {
-        "name": "lstm",
+        "name": "dlinear",
         "script": "Models/LTSF-Linear/run_longExp.py",
     },
 ]
