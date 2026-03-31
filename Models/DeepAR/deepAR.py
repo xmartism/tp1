@@ -35,7 +35,7 @@ from gluonts.evaluation import make_evaluation_predictions
 
 class EarlyStopping(Callback):
 
-    def __init__(self, patience=10, min_delta=1e-4, restore_best=True):
+    def __init__(self, patience=5, min_delta=1e-4, restore_best=True):
         self.patience = patience
         self.min_delta = min_delta
         self.restore_best = restore_best
@@ -43,12 +43,13 @@ class EarlyStopping(Callback):
         self.best_loss = np.inf
         self.epochs_without_improvement = 0
         self.best_epoch = 0
+        self.last_epoch = 0
         self.best_network_params = None
 
     def on_epoch_end(self, epoch_no, epoch_loss, training_network, trainer, best_epoch_info, ctx):
+        self.last_epoch = epoch_no
 
         if epoch_loss < self.best_loss - self.min_delta:
-
             self.best_loss = epoch_loss
             self.best_epoch = epoch_no
             self.epochs_without_improvement = 0
@@ -106,8 +107,14 @@ def load_csv_dataset(filepath, date_col, target_col):
 def infer_freq(df):
     freq = pd.infer_freq(df.index)
     if freq is None:
-        return "H"
-    return freq
+        return "h"
+    # Normalize deprecated aliases
+    freq_map = {
+        "H": "h", "60T": "h", "60min": "h",
+        "T": "min",
+        "M": "ME", "Q": "QE-DEC", "Y": "YE-DEC",
+    }
+    return freq_map.get(freq, freq)
 
 
 def build_dataset_entry(df, target_col, covariate_cols):
@@ -130,8 +137,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--train-dataset", required=True)
-    parser.add_argument("--val-dataset",   required=True,
-                        help="Validation dataset (last portion of original train data)")
+    parser.add_argument("--val-dataset",   required=True)
     parser.add_argument("--test-dataset",  required=True)
 
     parser.add_argument("--target", required=True)
@@ -140,7 +146,7 @@ def main():
     parser.add_argument("--horizon", type=int, required=True)
     parser.add_argument("--output",  required=True)
 
-    parser.add_argument("--epochs",     type=int,   default=200)
+    parser.add_argument("--epochs",     type=int,   default=100)
     parser.add_argument("--lr",         type=float, default=1e-3)
     parser.add_argument("--batch-size", type=int,   default=64)
 
@@ -154,7 +160,18 @@ def main():
     parser.add_argument("--num-samples", type=int, default=200)
     parser.add_argument("--patience",    type=int, default=10)
 
+    parser.add_argument("--loopback-window", type=int, default=None)
+
+    parser.add_argument("--seed", type=int, default=0)
+
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # Random seed
+    # ------------------------------------------------------------------
+
+    np.random.seed(args.seed)
+    mx.random.seed(args.seed)
 
     # ------------------------------------------------------------------
     # Load datasets
@@ -204,7 +221,12 @@ def main():
     # Context length
     # ------------------------------------------------------------------
 
-    context_length = args.context_length if args.context_length else args.horizon * 2
+    loopback_window = args.loopback_window if args.loopback_window else args.horizon * 4
+
+    if args.context_length:
+        context_length = args.context_length
+    else:
+        context_length = loopback_window
 
     # ------------------------------------------------------------------
     # MXNet context
@@ -234,7 +256,7 @@ def main():
         num_layers=args.num_layers,
         num_cells=args.num_cells,
         distr_output=GaussianOutput(),
-        scaling=True,
+        scaling=False,
         batch_size=args.batch_size,
         trainer=Trainer(
             epochs=args.epochs,
@@ -257,15 +279,9 @@ def main():
     # ------------------------------------------------------------------
 
     print("[INFO] Running prediction on test split...")
-    forecast_it, _ = make_evaluation_predictions(
-        dataset=test_dataset,
-        predictor=predictor,
-        num_samples=args.num_samples,
-    )
-
-    forecasts   = list(forecast_it)
-    predictions = forecasts[0].quantile(0.5).tolist()
-    predictions = predictions[:args.horizon]
+    forecast_it = predictor.predict(test_dataset)
+    forecasts = list(forecast_it)
+    predictions = forecasts[0].quantile(0.5).tolist()[:args.horizon]
 
     # ------------------------------------------------------------------
     # Save output
@@ -277,7 +293,12 @@ def main():
     with open(output_path, "w") as f:
         json.dump(predictions, f)
 
+    metadata_path = output_path.parent / "metadata_deepAR.txt"
+    with open(metadata_path, "w") as f:
+        f.write(f"epochs:{early_stopping.last_epoch}\n")
+
     print(f"[INFO] Predictions saved to {output_path}")
+    print(f"[INFO] Metadata saved to {metadata_path}")
 
 
 if __name__ == "__main__":
