@@ -38,6 +38,8 @@ def main():
     parser.add_argument("--test-dataset", required=True)
     parser.add_argument("--target", required=True)
     parser.add_argument("--horizon", type=int, required=True)
+    parser.add_argument("--lookback-window", type=int, required=True)
+    parser.add_argument("--seed", type=int, required=True)
 
     # NOVÉ (nastavené ako nepovinné, aby skript nepadal, kým kolega neupraví pipeline)
     parser.add_argument("--dataset-name", type=str, default="Unknown", help="Názov zdrojového datasetu")
@@ -80,6 +82,8 @@ def main():
         "Target": args.target,
         "Model": args.model_name,
         "Horizon": args.horizon,
+        "Lookback window": args.lookback_window,
+        "Seed": args.seed,
         "Train Time (s)": round(args.train_time, 2),
         "MSE": round(mse, 4),
         "MAE": round(mae, 4),

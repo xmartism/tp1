@@ -23,6 +23,8 @@ EXPERIMENTS = [
         "target":   "Temperature (C)",
         "date":     "Formatted Date",
         "horizons": [24, 48],
+        "lookback-window": 96,
+        "seed": 42,
     },
     {
         "dataset":  "data/ETTh1.csv",
@@ -95,7 +97,8 @@ def experiment_output_dir(experiment_id: int) -> Path:
 
 
 def run_single_experiment(experiment_id: int, dataset: str, target: str,
-                           date_col: str, horizon: int) -> bool:
+                           date_col: str, horizon: int,
+                          lookback_window: int | None = None, seed: int | None = None) -> bool:
     out_dir = OUTPUTS_ROOT / str(experiment_id)
     out_dir.mkdir(parents=True, exist_ok=True)
     results_file = out_dir / "results.csv"
@@ -105,6 +108,10 @@ def run_single_experiment(experiment_id: int, dataset: str, target: str,
     print(f"#  Dataset : {dataset}")
     print(f"#  Target  : {target}")
     print(f"#  Horizon : {horizon}")
+    if lookback_window is not None:
+        print(f"#  Lookback-window: {lookback_window}")
+    if seed is not None:
+        print(f"#  Seed    : {seed}")
     print(f"#  Out dir : {out_dir}")
     print(f"{'#'*60}")
 
@@ -117,6 +124,8 @@ def run_single_experiment(experiment_id: int, dataset: str, target: str,
         "--date",         date_col,
         "--horizon",      str(horizon),
         "--output-dir",   str(out_dir),
+        *(["--lookback-window",  str(lookback_window)] if lookback_window is not None else []),
+        *(["--seed",      str(seed)]     if seed     is not None else []),
     ]
 
     print(f"  CMD: {' '.join(cmd)}\n")
@@ -143,6 +152,8 @@ def main():
         dataset  = exp_cfg["dataset"]
         target   = exp_cfg["target"]
         date_col = exp_cfg.get("date", "date")
+        lookback_window = exp_cfg.get("lookback-window", None)
+        seed     = exp_cfg.get("seed", None)
 
         for horizon in exp_cfg["horizons"]:
             ok = run_single_experiment(
@@ -151,6 +162,8 @@ def main():
                 target=target,
                 date_col=date_col,
                 horizon=horizon,
+                lookback_window=lookback_window,
+                seed=seed,
             )
             if ok:
                 passed += 1

@@ -9,6 +9,8 @@ Parametre:
 --target        (povinny)  nazov cieloveho stlpca
 --date          (default: "date")  nazov stlpca s datumom
 --horizon       (povinny)  pocet krokov predikcie
+--lookback-window (volitelny, default: 4 * horizon)  dlzka vstupneho okna
+--seed          (volitelny, default: nahodne vygenerovany)  seed pre reprodukovatelnost
 --output-dir    (default: Pipeline/outputs)  priecinok pre vystupy tohto behu
 
 Priklad (priamo):
@@ -17,6 +19,8 @@ python3 Pipeline/pipeline.py \
     --target "Temperature (C)" \
     --date "Formatted Date" \
     --horizon 24 \
+    --lookback-window 96 \
+    --seed 42 \
     --output-dir Pipeline/outputs/1
 
 Priklad (cez run_experiments.py - odporucane):
@@ -28,7 +32,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
+import random
 import pandas as pd
 import time
 
@@ -38,30 +42,26 @@ import time
 # ---------------------------------------------------------------------------
 
 MODELS = [
-    {
-        "name": "deepAR",
-        "script": "Models/DeepAR/deepAR.py",
-    },
     # {
-    #     "name": "transformer",
-    #     "script": "Models/Transformer/transformer.py",
+    #     "name": "deepAR",
+    #     "script": "Models/DeepAR/deepAR.py",
     # },
-    {
-        "name": "nbeats",
-         "script": "Models/NBeats/NBeats.py",
-    },
+    # {
+    #     "name": "nbeats",
+    #      "script": "Models/NBeats/NBeats.py",
+    # },
     {
         "name": "tsmixer",
         "script": "Models/tsmixer/tsmixer.py",
     },
-    {
-        "name": "tft",
-        "script": "Models/TFT/tft.py",
-    },
-    {
-        "name": "dlinear",
-        "script": "Models/LTSF-Linear/run_longExp.py",
-    },
+    # {
+    #     "name": "tft",
+    #     "script": "Models/TFT/tft.py",
+    # },
+    # {
+    #     "name": "dlinear",
+    #     "script": "Models/LTSF-Linear/run_longExp.py",
+    # },
 ]
 
 TRAIN_RATIO = 0.70
@@ -150,6 +150,8 @@ def run_pipeline(args):
 
     # Split once - all models share the same splits
     train_path, val_path, test_path = split_dataset(args.dataset, args.date)
+    lookback_window = args.lookback_window if args.lookback_window is not None else 4 * args.horizon
+    seed = args.seed if args.seed is not None else random.randint(0, 2 ** 31 - 1)
 
     # Ensure output directory exists
     output_dir = Path(args.output_dir)
@@ -178,6 +180,8 @@ def run_pipeline(args):
             "--target",        args.target,
             "--date",          args.date,
             "--horizon",       str(args.horizon),
+            "--lookback-window", str(lookback_window),
+            "--seed",          str(seed),
             "--output",        output_file,
         ]
 
@@ -201,6 +205,8 @@ def run_pipeline(args):
             "--test-dataset", str(test_path),
             "--target", args.target,
             "--horizon", str(args.horizon),
+            "--lookback-window", str(lookback_window),
+            "--seed", str(seed),
             "--dataset-name", Path(args.dataset).name,
             "--train-time", str(train_time)
         ]
@@ -238,6 +244,8 @@ def main():
     parser.add_argument("--target",       required=True, help="Target column name")
     parser.add_argument("--date",         default="date", help="Date column name (default: date)")
     parser.add_argument("--horizon",      type=int, required=True, help="Forecast horizon")
+    parser.add_argument("--lookback-window", type=int, default=None, help="Dlzka vstupneho okna (default: 4 * horizon)")
+    parser.add_argument("--seed",         type=int, default=None, help="Seed pre reprodukovatelnost")
     parser.add_argument("--output-dir",   default="Pipeline/outputs",
                         help="Directory for model outputs and results (default: Pipeline/outputs)")
 
