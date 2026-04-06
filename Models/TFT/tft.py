@@ -20,19 +20,19 @@ logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(logging.ERROR)
 logging.getLogger("darts").setLevel(logging.ERROR)
 
+# Pre RTX 3090 toto pomáha využiť Tensor Cores pre float32 matice
 torch.set_float32_matmul_precision('medium')
 
 
 # 2. Vlastný callback na výpis progresu pre pipeline logy
 class PipelineProgressCallback(Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        # Vypíše progres každých 10 dávok (môžeš zmeniť podľa veľkosti datasetu)
-        if batch_idx % 10 == 0:
+        # Pri batch_size=128 bude dávok menej, vypisujeme každú 5. dávku
+        if batch_idx % 5 == 0:
             epoch = trainer.current_epoch + 1
             max_epochs = trainer.max_epochs
             total_batches = trainer.num_training_batches
 
-            # Ochrana proti deleniu nulou
             if total_batches and total_batches > 0:
                 percent = (batch_idx / total_batches) * 100
                 print(
@@ -58,7 +58,6 @@ def main():
         df_val = pd.read_csv(args.val_dataset)
         df_test = pd.read_csv(args.test_dataset)
 
-        # Odstránenie duplicitných časov
         df_train = df_train.drop_duplicates(subset=[args.date], keep='first')
         df_val = df_val.drop_duplicates(subset=[args.date], keep='first')
         df_test = df_test.drop_duplicates(subset=[args.date], keep='first')
@@ -68,7 +67,6 @@ def main():
         sys.exit(1)
 
     try:
-        # Zistenie frekvencie
         temp_dates = pd.DatetimeIndex(pd.to_datetime(df_train[args.date], utc=True))
         zistena_frekvencia = pd.infer_freq(temp_dates[:10])
 
@@ -78,7 +76,6 @@ def main():
         else:
             print(f"[TFT] Automaticky zistená frekvencia dát: {zistena_frekvencia}")
 
-        # Vytvorenie TimeSeries
         series_train = TimeSeries.from_dataframe(df_train, time_col=args.date, value_cols=args.target,
                                                  fill_missing_dates=True, freq=zistena_frekvencia)
         series_val = TimeSeries.from_dataframe(df_val, time_col=args.date, value_cols=args.target,
@@ -93,9 +90,7 @@ def main():
         print(f"[ERROR] Problém s vytváraním TimeSeries: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Spojenie histórie pre predikciu
     train_val_series = series_train.append(series_val)
-
     lookback = args.lookback_window
 
     if len(series_train) <= lookback + args.horizon:
@@ -104,65 +99,56 @@ def main():
 
     print(f"[TFT] Trénujem model (Lookback: {lookback}, Horizon: {args.horizon}, Seed: {args.seed})...")
 
-    # Pridanie Early Stoppingu
+    # Agresívnejší Early Stopping
     my_stopper = EarlyStopping(
         monitor="val_loss",
-        patience=5,
-        min_delta=0.00,
+        patience=3,  # Znížené z 5 na 3
+        min_delta=0.01,  # Ignoruj zanedbateľné zlepšenia (zrýchli ukončenie)
         mode='min',
     )
 
-    # Inštancia nášho vlastného progress callbacku
     my_progress = PipelineProgressCallback()
-
     max_epochs = 100
 
-    # Model TFT s minimálnym preprocessingom
+    # Výrazne odľahčený TFT model
     model = TFTModel(
         input_chunk_length=lookback,
         output_chunk_length=args.horizon,
-        hidden_size=32,
+        hidden_size=16,  # Drastické zmenšenie zo 64 na 16
         lstm_layers=1,
-        num_attention_heads=4,
+        num_attention_heads=2,  # Zmenšenie zo 4 na 2
         dropout=0.1,
-        batch_size=1024,
+        batch_size=128,  # Zvýšenie z 32 na 128 (RTX 3090 to zvládne ľahko)
         n_epochs=max_epochs,
         add_relative_index=True,
         random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "cuda",
             "devices": 1 if torch.cuda.is_available() else "auto",
-            "enable_progress_bar": False,  # Štandardný progress bar necháme vypnutý
+            "precision": "16-mixed",  # ZAPNUTIE 16-BIT MIXED PRECISION (obrovský boost pre RTX sériu)
+            "enable_progress_bar": False,
             "logger": False,
-            "callbacks": [my_stopper, my_progress]  # Pridali sme my_progress
+            "callbacks": [my_stopper, my_progress]
         }
     )
 
-    # Trénujeme (podáme aj val_series pre sledovanie val_loss early stopperom)
     model.fit(series_train, val_series=series_val, verbose=False)
 
-    # Zistenie počtu epoch (kde sa to zastavilo)
     ukoncena_epocha = max_epochs
     if hasattr(model, 'trainer') and model.trainer is not None:
         ukoncena_epocha = model.trainer.current_epoch
 
-    # Ak zafungoval early stopping (zastavilo sa skôr)
     if my_stopper.stopped_epoch > 0:
         ukoncena_epocha = my_stopper.stopped_epoch
 
     print(f"[TFT] Vytváram predikciu...")
-    # Predikujeme z train_val histórie
     prediction = model.predict(n=args.horizon, series=train_val_series)
-
-    # Extrahujeme predikcie do listu pre JSON
     pred_list = prediction.values().flatten().tolist()
 
-    # Zápis predikcií
     print(f"[TFT] Zapisujem výsledky do {args.output}")
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(pred_list, f)
 
-    # Zápis metadát (rovnaký priečinok ako args.output)
     output_path = Path(args.output)
     metadata_path = output_path.parent / "tft_metadata.txt"
     print(f"[TFT] Zapisujem metadáta do {metadata_path}")
