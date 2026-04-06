@@ -58,10 +58,10 @@ MODELS = [
     #     "name": "tft",
     #     "script": "Models/TFT/tft.py",
     # },
-    # {
-    #     "name": "dlinear",
-    #     "script": "Models/LTSF-Linear/run_longExp.py",
-    # },
+    {
+        "name": "dlinear",
+        "script": "Models/LTSF-Linear/run_longExp.py",
+    },
 ]
 
 TRAIN_RATIO = 0.70

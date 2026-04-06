@@ -18,6 +18,8 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pathlib import Path
+
 warnings.filterwarnings('ignore')
 
 class Exp_Main(Exp_Basic):
@@ -110,6 +112,7 @@ class Exp_Main(Exp_Basic):
         return total_loss
 
     def train(self, setting):
+        ES = False
         train_data, train_loader = self._get_data(flag='train')
         f_dim = train_data.df_data.columns.get_loc(self.args.target)
         if not self.args.train_only:
@@ -210,12 +213,23 @@ class Exp_Main(Exp_Basic):
 
             if early_stopping.early_stop:
                 print("Early stopping")
+                myPath = Path(self.args.output)
+                meta_output = str(myPath.parent) + "/dlinear_metadata.txt"
+                with open(meta_output, "w") as f:
+                    f.write(f"epoch: {epoch}")
+                ES = True
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
+        
+        if not ES:
+            myPath = Path(self.args.output)
+            meta_output = str(myPath.parent) + "/dlinear_metadata.txt"
+            with open(meta_output, "w") as f:
+                f.write(f"epoch: {self.args.train_epochs}")
 
         return self.model
 

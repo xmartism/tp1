@@ -6,14 +6,11 @@ import random
 import numpy as np
 
 def main():
-    fix_seed = 2021
-    random.seed(fix_seed)
-    torch.manual_seed(fix_seed)
-    np.random.seed(fix_seed)
-
     parser = argparse.ArgumentParser(description='Autoformer & Transformer family for Time Series Forecasting')
 
     # basic config
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--lookback-window', type=int)
     parser.add_argument('--is_training', type=int, required=False, default=1, help='status')
     parser.add_argument('--train_only', type=bool, required=False, default=False, help='perform training on full input dataset without validation and testing')
     parser.add_argument('--model_id', type=str, required=False, default='DLinear_custom', help='model id')
@@ -69,9 +66,9 @@ def main():
     # optimization
     parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
     parser.add_argument('--itr', type=int, default=1, help='experiments times')
-    parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')
+    parser.add_argument('--train_epochs', type=int, default=100, help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
-    parser.add_argument('--patience', type=int, default=4, help='early stopping patience')
+    parser.add_argument('--patience', type=int, default=5, help='early stopping patience')
     parser.add_argument('--learning_rate', type=float, default=0.01, help='optimizer learning rate')
     parser.add_argument('--des', type=str, default='Exp', help='exp description')
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
@@ -84,10 +81,18 @@ def main():
     parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
     parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids of multile gpus')
     parser.add_argument('--test_flop', action='store_true', default=False, help='See utils/tools for usage')
+    
 
     args = parser.parse_args()
     args.do_predict = True
     args.individual = True
+    args.seq_len = args.lookback_window
+    
+    fix_seed = args.seed
+    random.seed(fix_seed)
+    torch.manual_seed(fix_seed)
+    np.random.seed(fix_seed)
+
 
     args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
