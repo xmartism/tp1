@@ -1,8 +1,8 @@
 """
-Forecasting Pipeline
+Forecasting Pipeline so spoločnou normalizáciou
 
-Rozdeli dataset (70/15/15) a postupne spusti vsetky modely.
-Vystupy: Pipeline/outputs/<experiment_id>/<model>_output.json, Pipeline/outputs/<experiment_id>/results.csv, Pipeline/outputs/experiments.csv
+Rozdeli dataset (70/15/15), oškáluje dáta (StandardScaler) a postupne spusti vsetky modely.
+Vystupy: Pipeline/outputs/<experiment_id>/<model>_output.txt, Pipeline/outputs/<experiment_id>/results.csv, Pipeline/outputs/experiments.csv
 
 Parametre:
 --dataset       (povinny)  cesta k CSV datasetu
@@ -31,10 +31,13 @@ import argparse
 import subprocess
 import sys
 import tempfile
+import json
 from pathlib import Path
 import random
 import pandas as pd
+import numpy as np
 import time
+from sklearn.preprocessing import StandardScaler
 
 
 # ---------------------------------------------------------------------------
@@ -46,22 +49,22 @@ MODELS = [
     #     "name": "deepAR",
     #     "script": "Models/DeepAR/deepAR.py",
     # },
+    #{
+    #     "name": "nbeats",
+    #     "script": "Models/NBeats/NBeats.py",
+    #},
+    #{
+    #    "name": "tsmixer",
+    #    "script": "Models/tsmixer/tsmixer.py",
+    #},
     {
-         "name": "nbeats",
-         "script": "Models/NBeats/NBeats.py",
+        "name": "tft",
+        "script": "Models/TFT/tft.py",
     },
-    {
-        "name": "tsmixer",
-        "script": "Models/tsmixer/tsmixer.py",
-    },
-    # {
-    #     "name": "tft",
-    #     "script": "Models/TFT/tft.py",
-    # },
-    {
-        "name": "dlinear",
-        "script": "Models/LTSF-Linear/run_longExp.py",
-    },
+    #{
+    #    "name": "dlinear",
+    #    "script": "Models/LTSF-Linear/run_longExp.py",
+    #},
 ]
 
 TRAIN_RATIO = 0.70
@@ -70,15 +73,13 @@ VAL_RATIO   = 0.15
 
 
 # ---------------------------------------------------------------------------
-# Dataset splitting
+# Dataset splitting & Normalization
 # ---------------------------------------------------------------------------
 
-def split_dataset(dataset_path: str, date_col: str) -> tuple[Path, Path, Path]:
+def split_and_scale_dataset(dataset_path: str, date_col: str, target_col: str) -> tuple[Path, Path, Path, Path, StandardScaler]:
     """
-    Load the dataset and split chronologically:
-        70% train | 15% validation | 15% test
-
-    Returns paths to (train.csv, val.csv, test.csv) written in a temp directory.
+    Load the dataset, split chronologically, and apply StandardScaler.
+    Returns paths to (train_scaled, val_scaled, test_scaled, test_original) and the fitted scaler.
     """
     path = Path(dataset_path)
     sep = "\t" if path.suffix.lower() == ".txt" else ","
@@ -92,9 +93,13 @@ def split_dataset(dataset_path: str, date_col: str) -> tuple[Path, Path, Path]:
     train_end = int(n * TRAIN_RATIO)
     val_end   = int(n * (TRAIN_RATIO + VAL_RATIO))
 
-    train_df = df.iloc[:train_end]
-    val_df   = df.iloc[train_end:val_end]
-    test_df  = df.iloc[val_end:]
+    # Kópia pre bezpečné úpravy
+    train_df = df.iloc[:train_end].copy()
+    val_df   = df.iloc[train_end:val_end].copy()
+    test_df  = df.iloc[val_end:].copy()
+
+    # Uchováme pôvodný test set pre evaluáciu metrík v reálnych hodnotách
+    test_df_original = test_df.copy()
 
     test_ratio = 1 - TRAIN_RATIO - VAL_RATIO
     print(
@@ -105,20 +110,33 @@ def split_dataset(dataset_path: str, date_col: str) -> tuple[Path, Path, Path]:
         f"- {n} rows total"
     )
 
-    tmp_dir    = Path(tempfile.mkdtemp(prefix="pipeline_"))
+    # Inicializácia a fitovanie scalera IBA na trénovacích dátach
+    scaler = StandardScaler()
+    train_df[target_col] = scaler.fit_transform(train_df[[target_col]])
+
+    # Transformácia validačných a testovacích dát
+    val_df[target_col] = scaler.transform(val_df[[target_col]])
+    test_df[target_col] = scaler.transform(test_df[[target_col]])
+
+    print(f"[INFO] Normalizácia aplikovaná (Mean: {scaler.mean_[0]:.4f}, Scale: {scaler.scale_[0]:.4f})")
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="pipeline_"))
     train_path = tmp_dir / "train.csv"
     val_path   = tmp_dir / "val.csv"
     test_path  = tmp_dir / "test.csv"
+    test_orig_path = tmp_dir / "test_original.csv"
 
     train_df.to_csv(train_path, index=False)
     val_df.to_csv(val_path,     index=False)
     test_df.to_csv(test_path,   index=False)
+    test_df_original.to_csv(test_orig_path, index=False)
 
-    print(f"[INFO] Train -> {train_path}")
-    print(f"[INFO] Val   -> {val_path}")
-    print(f"[INFO] Test  -> {test_path}")
+    print(f"[INFO] Train (scaled) -> {train_path}")
+    print(f"[INFO] Val (scaled)   -> {val_path}")
+    print(f"[INFO] Test (scaled)  -> {test_path}")
+    print(f"[INFO] Test (orig)    -> {test_orig_path}")
 
-    return train_path, val_path, test_path
+    return train_path, val_path, test_path, test_orig_path, scaler
 
 
 # ---------------------------------------------------------------------------
@@ -148,8 +166,9 @@ def run_command(cmd: list[str], step_label: str) -> bool:
 
 def run_pipeline(args):
 
-    # Split once - all models share the same splits
-    train_path, val_path, test_path = split_dataset(args.dataset, args.date)
+    # Split and normalize once - all models share the same splits
+    train_path, val_path, test_path, test_orig_path, scaler = split_and_scale_dataset(args.dataset, args.date, args.target)
+
     lookback_window = args.lookback_window if args.lookback_window is not None else 4 * args.horizon
     seed = args.seed if args.seed is not None else random.randint(0, 2 ** 31 - 1)
 
@@ -170,7 +189,7 @@ def run_pipeline(args):
         print(f"{'#'*60}")
 
         # ------------------------------------------------------------------
-        # Step 1: Train & predict
+        # Step 1: Train & predict (on scaled data)
         # ------------------------------------------------------------------
         model_cmd = [
             sys.executable, script,
@@ -195,14 +214,34 @@ def run_pipeline(args):
             continue
 
         # ------------------------------------------------------------------
-        # Step 2: Evaluate -> results.csv
+        # Step 1.5: Inverse Transform Predictions
+        # ------------------------------------------------------------------
+        try:
+            print(f"[INFO] Odškálovávam predikcie modelu {name} späť na pôvodné hodnoty...")
+            with open(output_file, "r", encoding="utf-8") as f:
+                preds_scaled = json.load(f)
+
+            # Prevedieme do numpy poľa pre scaler, odškálujeme a vrátime na obyčajný list
+            preds_array = np.array(preds_scaled).reshape(-1, 1)
+            preds_inverse = scaler.inverse_transform(preds_array).flatten().tolist()
+
+            # Prepíšeme súbor odškálovanými hodnotami
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(preds_inverse, f)
+        except Exception as e:
+            print(f"[ERROR] Zlyhalo odškálovanie predikcií pre model '{name}': {e}", file=sys.stderr)
+            failed_models.append(name)
+            continue
+
+        # ------------------------------------------------------------------
+        # Step 2: Evaluate -> results.csv (evaluates inverse preds vs original test)
         # ------------------------------------------------------------------
         eval_cmd = [
             sys.executable, "Pipeline/evaluate.py",
             "--model-name", name,
             "--output-file", output_file,
             "--results-file", str(results_file),
-            "--test-dataset", str(test_path),
+            "--test-dataset", str(test_orig_path),  # Používame PÔVODNÝ neškálovaný dataset
             "--target", args.target,
             "--horizon", str(args.horizon),
             "--lookback-window", str(lookback_window),
