@@ -24,6 +24,7 @@ torch.set_float32_matmul_precision('medium')
 
 
 # 2. Vlastný callback na výpis progresu pre pipeline logy
+
 class PipelineProgressCallback(Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         # Vypíše progres každých 10 dávok (môžeš zmeniť podľa veľkosti datasetu)
@@ -125,13 +126,13 @@ def main():
         lstm_layers=1,
         num_attention_heads=2,
         dropout=0.1,
-        batch_size=1024,
+        batch_size=32,
         n_epochs=max_epochs,
         add_relative_index=True,
         random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "cuda",
-            "devices": 1 if torch.cuda.is_available() else "auto",
+            "devices": 1,
             "enable_progress_bar": False,  # Štandardný progress bar necháme vypnutý
             "logger": False,
             "callbacks": [my_stopper, my_progress]  # Pridali sme my_progress
