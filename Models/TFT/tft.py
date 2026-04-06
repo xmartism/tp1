@@ -121,11 +121,11 @@ def main():
     model = TFTModel(
         input_chunk_length=lookback,
         output_chunk_length=args.horizon,
-        hidden_size=64,
+        hidden_size=32,
         lstm_layers=1,
         num_attention_heads=4,
         dropout=0.1,
-        batch_size=32,
+        batch_size=1024,
         n_epochs=max_epochs,
         add_relative_index=True,
         random_state=args.seed,
