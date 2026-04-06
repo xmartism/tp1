@@ -1,1 +1,0 @@
-python nbeats_cli.py --data 1D_AAPL2.txt --target Close --time_col Date --freq D --input_len 90 --pred_len 30 --epochs 40 --device gpu

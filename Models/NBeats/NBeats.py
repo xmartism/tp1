@@ -1,17 +1,22 @@
 import argparse
 import sys
+import os
+from pathlib import Path
 import torch
 import pandas as pd
 import numpy as np
 import json
 
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
+
 from darts import TimeSeries
 from darts.models import NBEATSModel
 from darts.utils.missing_values import fill_missing_values
 
-
 import warnings
 import logging
+
 # 1. Ignoruje všetky bežné Python varovania (napr. tie o časových zónach a starom kóde)
 warnings.filterwarnings("ignore")
 
@@ -32,7 +37,14 @@ def main():
     parser.add_argument("--date", required=True, help="Nazov stlpca s datumom")
     parser.add_argument("--horizon", type=int, required=True, help="Pocet krokov predikcie")
     parser.add_argument("--output", required=True, help="Cesta k vystupnemu textovemu suboru")
+
+    # NOVÉ PARAMETRE
+    parser.add_argument("--lookback-window", type=int, default=None, help="Dlzka vstupneho okna (default: 4 * horizon)")
+    parser.add_argument("--seed", type=int, default=42, help="Seed pre reprodukovatelnost")
     args = parser.parse_args()
+
+    # Nastavenie seedu pre PyTorch a Numpy (reprodukovateľnosť)
+    pl.seed_everything(args.seed, workers=True)
 
     print(f"[N-BEATS] Načítavam dáta...")
     try:
@@ -40,11 +52,10 @@ def main():
         df_val = pd.read_csv(args.val_dataset)
         df_test = pd.read_csv(args.test_dataset)
 
-        # --- NOVÉ: Odstránenie duplicitných časov ---
+        # --- Odstránenie duplicitných časov ---
         df_train = df_train.drop_duplicates(subset=[args.date], keep='first')
         df_val = df_val.drop_duplicates(subset=[args.date], keep='first')
         df_test = df_test.drop_duplicates(subset=[args.date], keep='first')
-        # --------------------------------------------
 
     except Exception as e:
         print(f"[ERROR] Zlyhalo načítanie CSV súborov: {e}", file=sys.stderr)
@@ -79,33 +90,47 @@ def main():
     # Spojenie train a val pre potreby histórie pri predikcii
     train_val_series = series_train.append(series_val)
 
-    lookback = args.horizon * 3
+    # NOVÉ: Lookback window logika
+    lookback = args.lookback_window if args.lookback_window is not None else 4 * args.horizon
 
     if len(series_train) <= lookback + args.horizon:
         print(f"[ERROR] Trénovací set je príliš krátky pre lookback {lookback} a horizon {args.horizon}.",
               file=sys.stderr)
         sys.exit(1)
 
-    print(f"[N-BEATS] Trénujem model (Lookback: {lookback}, Horizon: {args.horizon})...")
+    # NOVÉ: Nastavenie Early Stopping
+    early_stopper = EarlyStopping(
+        monitor="val_loss",
+        patience=5,  # Kolko epôch bez zlepšenia sa má čakať
+        min_delta=0.001,  # Minimálne zlepšenie, aby sa počítalo ako "zlepšenie"
+        mode="min",
+    )
+
+    print(f"[N-BEATS] Trénujem model (Lookback: {lookback}, Horizon: {args.horizon}, Seed: {args.seed})...")
     model = NBEATSModel(
         input_chunk_length=lookback,
         output_chunk_length=args.horizon,
         generic_architecture=True,
         num_stacks=30,
         layer_widths=512,
-        n_epochs=3,
+        n_epochs=50,  # Zvýšené na 50, aby mal early stopping šancu zafungovať (pôvodne bolo 3)
         batch_size=1024,
-        random_state=42,
+        random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "auto",
             "devices": 1 if torch.cuda.is_available() else "auto",
             "enable_progress_bar": False,
-            "logger": False
+            "logger": False,
+            "callbacks": [early_stopper]  # Pridaný callback pre Early Stopping
         }
     )
 
-    # Trénujeme priamo na neupravených dátach (očakávame, že už prišli oškálované z pipeline)
-    model.fit(series_train, verbose=False)
+    # NOVÉ: Do fit pridávame aj val_series, inak nebude fungovať val_loss pri Early Stopping
+    model.fit(series=series_train, val_series=series_val, verbose=False)
+
+    # Zistenie, na ktorej epoche sa model zastavil
+    stopped_epoch = model.trainer.current_epoch
+    print(f"[N-BEATS] Trénovanie skončilo na epoche: {stopped_epoch}")
 
     print(f"[N-BEATS] Vytváram predikciu...")
     # Predikujeme z train_val histórie
@@ -117,6 +142,14 @@ def main():
     print(f"[N-BEATS] Zapisujem výsledky do {args.output}")
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(pred_list, f)
+
+    # NOVÉ: Uloženie metadát o ukončenej epoche
+    out_path = Path(args.output)
+    metadata_file = out_path.parent / "nbeats_metadata.txt"
+
+    with open(metadata_file, "w", encoding="utf-8") as meta_f:
+        meta_f.write(f"epoch: {stopped_epoch}\n")
+    print(f"[N-BEATS] Metadáta uložené do {metadata_file}")
 
     print(f"[N-BEATS] Hotovo!")
 

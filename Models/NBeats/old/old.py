@@ -12,7 +12,94 @@ import zipfile
 
 torch.set_float32_matmul_precision('medium')
 
-df_sin = pd.read_csv('sinus_1000_10waves.csv')
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from darts import TimeSeries
+from darts.models import NBEATSModel
+from darts.metrics import smape
+from darts.dataprocessing.transformers import Scaler
+
+
+print("Sťahujem dataset M4 (Mesačné dáta - Train časť)...")
+
+url = "https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Train/Monthly-train.csv"
+df_m4 = pd.read_csv(url)
+
+H = 18
+LOOKBACK = 54
+N_SERIES = 1
+
+smapes = []
+
+print(f"Spúšťam test. Hľadám prvých {N_SERIES} dostatočne dlhých radov...\n")
+
+valid_series_count = 0
+row_index = 0
+
+while valid_series_count < N_SERIES and row_index < len(df_m4):
+
+    series_name = df_m4.iloc[row_index, 0]
+    values = df_m4.iloc[row_index, 1:].dropna().values.astype(float)
+    series = TimeSeries.from_values(values)
+
+    if len(series) < LOOKBACK + 2 * H:
+        row_index += 1
+        continue
+
+    train, val = series[:-H], series[-H:]
+
+    scaler = Scaler()
+    train_scaled = scaler.fit_transform(train)
+
+    model = NBEATSModel(
+        input_chunk_length=LOOKBACK,
+        output_chunk_length=H,
+        generic_architecture=True,
+        num_stacks=30,
+        layer_widths=512,
+        n_epochs=15,
+        batch_size=1024,
+        random_state=42,
+        pl_trainer_kwargs={
+            "accelerator": "auto",
+            "enable_progress_bar": False,
+            "logger": False
+        }
+    )
+
+    model.fit(train_scaled, verbose=False)
+
+    pred_scaled = model.predict(n=H)
+    pred = scaler.inverse_transform(pred_scaled)
+
+    error = smape(val, pred)
+    smapes.append(error)
+
+    print(f"Rad {series_name} (Dĺžka: {len(series)}) | sMAPE = {error:.2f}%")
+
+    valid_series_count += 1
+    row_index += 1
+
+final_smape = np.mean(smapes)
+
+print("\n" + "=" * 50)
+print(f"VÁŠ PRIEMERNÝ sMAPE (vzorka {len(smapes)} radov): {final_smape:.3f}%")
+print("CIEĽ Z ČLÁNKU (priemer za všetky mesačné rady): 12.048%")
+print("=" * 50 + "\n")
+
+plt.figure(figsize=(12, 6))
+train[-100:].plot(label='Tréningové dáta (História)')
+val.plot(label='Skutočnosť', color='black', linestyle='--')
+pred.plot(label='N-BEATS Predikcia', color='red', lw=2)
+
+plt.title(f'N-BEATS Predikcia pre rad {series_name} (sMAPE: {error:.2f}%)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.show()
+
+df_sin = pd.read_csv('../testData/sinus_1000_10waves.csv')
 series_sin = TimeSeries.from_dataframe(df_sin, value_cols='value')
 train_sin, val_sin = series_sin[:-200], series_sin[-200:]
 
@@ -129,7 +216,7 @@ plt.show()
 
 col_names = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
 
-df = pd.read_csv('1D_AAPL.txt', header=None, names=col_names)
+df = pd.read_csv('../testData/1D_AAPL.txt', header=None, names=col_names)
 df['Date'] = pd.to_datetime(df['Date'])
 
 series = TimeSeries.from_dataframe(df, 'Date', 'Close', freq='D', fill_missing_dates=True)

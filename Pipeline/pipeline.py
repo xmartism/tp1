@@ -46,10 +46,10 @@ MODELS = [
     #     "name": "deepAR",
     #     "script": "Models/DeepAR/deepAR.py",
     # },
-    # {
-    #     "name": "nbeats",
-    #      "script": "Models/NBeats/NBeats.py",
-    # },
+    {
+         "name": "nbeats",
+         "script": "Models/NBeats/NBeats.py",
+    },
     {
         "name": "tsmixer",
         "script": "Models/tsmixer/tsmixer.py",
