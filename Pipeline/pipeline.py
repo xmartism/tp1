@@ -15,7 +15,7 @@ Parametre:
 
 Priklad (priamo):
 python3 Pipeline/pipeline.py \
-    --dataset data/weatherHistory.csv \
+    --dataset Data/weatherHistory.csv \
     --target "Temperature (C)" \
     --date "Formatted Date" \
     --horizon 24 \
@@ -55,7 +55,7 @@ MODELS = [
     #},
     #{
     #    "name": "tsmixer",
-    #    "script": "Models/tsmixer/tsmixer.py",
+    #    "script": "Models/Tsmixer/tsmixer.py",
     #},
     {
         "name": "tft",

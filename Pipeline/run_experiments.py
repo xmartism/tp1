@@ -19,7 +19,7 @@ import time
 
 EXPERIMENTS = [
     {
-        "dataset":  "data/weatherHistory.csv",
+        "dataset":  "Data/weatherHistory.csv",
         "target":   "Temperature (C)",
         "date":     "Formatted Date",
         "horizons": [24, 48],
@@ -27,7 +27,7 @@ EXPERIMENTS = [
         "seed": 42,
     },
     {
-        "dataset":  "data/ETTh1.csv",
+        "dataset":  "Data/ETTh1.csv",
         "target":   "OT",
         "date":     "date",
         "horizons": [24, 48, 96],
