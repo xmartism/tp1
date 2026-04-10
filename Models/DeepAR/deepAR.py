@@ -160,7 +160,7 @@ def main():
     parser.add_argument("--num-samples", type=int, default=200)
     parser.add_argument("--patience",    type=int, default=10)
 
-    parser.add_argument("--loopback-window", type=int, default=None)
+    parser.add_argument("--lookback-window", type=int, default=None)
 
     parser.add_argument("--seed", type=int, default=0)
 
@@ -221,12 +221,12 @@ def main():
     # Context length
     # ------------------------------------------------------------------
 
-    loopback_window = args.loopback_window if args.loopback_window else args.horizon * 4
+    lookback_window = args.lookback_window if args.lookback_window else args.horizon * 4
 
     if args.context_length:
         context_length = args.context_length
     else:
-        context_length = loopback_window
+        context_length = lookback_window
 
     # ------------------------------------------------------------------
     # MXNet context
