@@ -5,6 +5,20 @@ import numpy as np
 from pathlib import Path
 import sys
 
+def read_last_epoch(output_file: str, model_name: str) -> int | None:
+    metadata_path = Path(output_file).parent / f"{model_name}_metadata.txt"
+    if not metadata_path.exists():
+        print(f"[WARN] Metadata file not found: {metadata_path}")
+        return None
+    try:
+        with open(metadata_path, "r") as f:
+            for line in f:
+                if line.startswith("epoch:"):
+                    return int(line.split(":")[1].strip())
+    except Exception as e:
+        print(f"[WARN] Could not read epoch from {metadata_path}: {e}")
+    return None
+
 
 def calculate_metrics(y_true, y_pred):
     y_true = np.array(y_true)
@@ -22,7 +36,7 @@ def calculate_metrics(y_true, y_pred):
     # Porovnávame, či predikcia odhadla správny smer zmeny (rast/pokles) voči predchádzajúcej skutočnej hodnote
     if len(y_true) > 1:
         actual_diff = y_true[1:] - y_true[:-1]
-        pred_diff = y_pred[1:] - y_true[:-1]
+        pred_diff = y_pred[1:] - y_pred[:-1]
         da = np.mean(np.sign(actual_diff) == np.sign(pred_diff)) * 100
     else:
         da = np.nan  # Ak máme horizont len 1, smer sa nedá určiť
@@ -72,7 +86,10 @@ def main():
     # 3. Výpočet metrík
     mse, mae, mape, da = calculate_metrics(actuals, predictions)
 
-    # 4. Uloženie do results.csv
+    # 4. Prečítanie poslednej epochy z metadata súborov
+    epochs_trained = read_last_epoch(args.output_file, args.model_name)
+
+    # 5. Uloženie do results.csv
     results_path = Path(args.results_file)
     results_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -85,10 +102,11 @@ def main():
         "Lookback window": args.lookback_window,
         "Seed": args.seed,
         "Train Time (s)": round(args.train_time, 2),
+	"Epochs Trained": epochs_trained if epochs_trained is not None else "N/A",
         "MSE": round(mse, 4),
         "MAE": round(mae, 4),
         "MAPE (%)": round(mape, 4),
-        "DA (%)": round(da, 2) if not np.isnan(da) else "N/A"
+        "MDA (%)": round(da, 2) if not np.isnan(da) else "N/A"
     }])
 
     # Pripojenie alebo vytvorenie nového súboru

@@ -168,7 +168,7 @@ def main():
     metadata_path = output_path.parent / "tft_metadata.txt"
     print(f"[TFT] Zapisujem metadáta do {metadata_path}")
     with open(metadata_path, "w", encoding="utf-8") as f:
-        f.write(f"epoch:{ukoncena_epocha}\n")
+        f.write(f"epoch: {ukoncena_epocha}\n")
 
     print(f"[TFT] Hotovo!")
 

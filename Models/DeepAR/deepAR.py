@@ -47,7 +47,7 @@ class EarlyStopping(Callback):
         self.best_network_params = None
 
     def on_epoch_end(self, epoch_no, epoch_loss, training_network, trainer, best_epoch_info, ctx):
-        self.last_epoch = epoch_no
+        self.last_epoch = epoch_no + 1
 
         if epoch_loss < self.best_loss - self.min_delta:
             self.best_loss = epoch_loss
@@ -293,9 +293,9 @@ def main():
     with open(output_path, "w") as f:
         json.dump(predictions, f)
 
-    metadata_path = output_path.parent / "metadata_deepAR.txt"
+    metadata_path = output_path.parent / "deepAR_metadata.txt"
     with open(metadata_path, "w") as f:
-        f.write(f"epochs:{early_stopping.last_epoch}\n")
+        f.write(f"epoch: {early_stopping.last_epoch}\n")
 
     print(f"[INFO] Predictions saved to {output_path}")
     print(f"[INFO] Metadata saved to {metadata_path}")
