@@ -1,0 +1,295 @@
+=== EXPERIMENT 1 ===
+  deepAR:
+    Train Time (s): mean=2132.1100  std=603.8030
+    Epochs Trained: mean=49.6667  std=14.0119
+    MSE: mean=294.0809  std=61.3957
+    MAE: mean=15.3705  std=1.0469
+    MAPE (%): mean=3.4153  std=0.2070
+    MDA (%): mean=51.5800  std=3.1600
+  dlinear:
+    Train Time (s): mean=280.0667  std=71.7435
+    Epochs Trained: mean=15.0000  std=4.0000
+    MSE: mean=1156.8793  std=59.9983
+    MAE: mean=29.5261  std=0.9647
+    MAPE (%): mean=6.5202  std=0.2205
+    MDA (%): mean=46.6700  std=4.7447
+  nbeats:
+    Train Time (s): mean=225.3933  std=82.1664
+    Epochs Trained: mean=8.0000  std=1.0000
+    MSE: mean=1548.3245  std=399.1015
+    MAE: mean=32.5511  std=5.0295
+    MAPE (%): mean=7.2565  std=1.1064
+    MDA (%): mean=47.0200  std=1.2124
+  tft:
+    Train Time (s): mean=1819.1167  std=310.3575
+    Epochs Trained: mean=9.6667  std=2.0817
+    MSE: mean=197.8102  std=78.3154
+    MAE: mean=10.7807  std=2.4020
+    MAPE (%): mean=2.4110  std=0.5349
+    MDA (%): mean=48.0700  std=5.2948
+  tsmixer:
+    Train Time (s): mean=513.0667  std=175.5147
+    Epochs Trained: mean=30.3333  std=1.1547
+    MSE: mean=561.7100  std=17.6993
+    MAE: mean=19.9123  std=0.2689
+    MAPE (%): mean=4.3776  std=0.0578
+    MDA (%): mean=52.2767  std=2.4306
+
+=== EXPERIMENT 2 ===
+  deepAR:
+    Train Time (s): mean=3593.4367  std=1903.8591
+    Epochs Trained: mean=46.0000  std=25.2389
+    MSE: mean=345.5741  std=183.9933
+    MAE: mean=15.8000  std=4.4664
+    MAPE (%): mean=3.4903  std=0.9536
+    MDA (%): mean=48.6900  std=3.9557
+  dlinear:
+    Train Time (s): mean=281.4033  std=128.9517
+    Epochs Trained: mean=15.3333  std=6.0277
+    MSE: mean=1364.0871  std=134.9036
+    MAE: mean=33.4915  std=2.5571
+    MAPE (%): mean=7.3907  std=0.5756
+    MDA (%): mean=50.7867  std=4.1595
+  nbeats:
+    Train Time (s): mean=323.2333  std=161.0852
+    Epochs Trained: mean=10.0000  std=3.0000
+    MSE: mean=2016.8429  std=648.0057
+    MAE: mean=36.5167  std=5.3563
+    MAPE (%): mean=8.1020  std=1.2005
+    MDA (%): mean=47.2967  std=1.2067
+  tft:
+    Train Time (s): mean=3377.5467  std=1108.8824
+    Epochs Trained: mean=10.3333  std=0.5774
+    MSE: mean=277.7591  std=48.4753
+    MAE: mean=13.4790  std=1.6826
+    MAPE (%): mean=3.0013  std=0.3862
+    MDA (%): mean=46.7700  std=1.5069
+  tsmixer:
+    Train Time (s): mean=425.2633  std=14.4768
+    Epochs Trained: mean=16.3333  std=0.5774
+    MSE: mean=606.4756  std=17.6842
+    MAE: mean=21.5080  std=0.3255
+    MAPE (%): mean=4.7236  std=0.0715
+    MDA (%): mean=45.3733  std=2.3600
+
+=== EXPERIMENT 3 ===
+  deepAR:
+    Train Time (s): mean=654.0233  std=134.3638
+    Epochs Trained: mean=19.3333  std=3.7859
+    MSE: mean=8.8232  std=1.3698
+    MAE: mean=2.5541  std=0.2058
+    MAPE (%): mean=32.8738  std=1.5723
+    MDA (%): mean=60.7033  std=1.6083
+  dlinear:
+    Train Time (s): mean=50.2233  std=18.6601
+    Epochs Trained: mean=14.3333  std=3.2146
+    MSE: mean=15.0877  std=1.6054
+    MAE: mean=3.3389  std=0.1955
+    MAPE (%): mean=36.9109  std=2.1903
+    MDA (%): mean=62.8067  std=2.1898
+  nbeats:
+    Train Time (s): mean=90.3733  std=47.7283
+    Epochs Trained: mean=9.0000  std=2.6458
+    MSE: mean=4.7704  std=0.8579
+    MAE: mean=1.8041  std=0.2037
+    MAPE (%): mean=24.0495  std=3.4004
+    MDA (%): mean=46.6667  std=3.9810
+  tft:
+    Train Time (s): mean=599.0000  std=457.3841
+    Epochs Trained: mean=11.0000  std=6.2450
+    MSE: mean=10.0412  std=2.8522
+    MAE: mean=2.5395  std=0.3738
+    MAPE (%): mean=32.2914  std=5.8388
+    MDA (%): mean=48.7700  std=1.2124
+  tsmixer:
+    Train Time (s): mean=62.7700  std=22.9816
+    Epochs Trained: mean=9.0000  std=1.0000
+    MSE: mean=3.8945  std=0.6038
+    MAE: mean=1.5871  std=0.1906
+    MAPE (%): mean=18.0750  std=2.2550
+    MDA (%): mean=51.2267  std=5.1944
+
+=== EXPERIMENT 4 ===
+  deepAR:
+    Train Time (s): mean=1390.3033  std=203.8739
+    Epochs Trained: mean=19.6667  std=3.0551
+    MSE: mean=8.5789  std=1.4244
+    MAE: mean=2.5383  std=0.2605
+    MAPE (%): mean=44.3776  std=6.6911
+    MDA (%): mean=53.2267  std=1.5984
+  dlinear:
+    Train Time (s): mean=34.3000  std=3.6695
+    Epochs Trained: mean=11.0000  std=2.0000
+    MSE: mean=15.0058  std=3.2085
+    MAE: mean=3.3125  std=0.3712
+    MAPE (%): mean=47.3350  std=3.6399
+    MDA (%): mean=54.2767  std=1.0921
+  nbeats:
+    Train Time (s): mean=101.5167  std=39.0007
+    Epochs Trained: mean=9.6667  std=1.1547
+    MSE: mean=10.0854  std=1.3863
+    MAE: mean=2.6202  std=0.1589
+    MAPE (%): mean=54.7339  std=0.7085
+    MDA (%): mean=46.9467  std=2.1115
+  tft:
+    Train Time (s): mean=800.6600  std=232.6958
+    Epochs Trained: mean=9.6667  std=8.0829
+    MSE: mean=194.4770  std=304.7721
+    MAE: mean=9.8895  std=11.2936
+    MAPE (%): mean=186.4875  std=197.8667
+    MDA (%): mean=44.6767  std=1.5995
+  tsmixer:
+    Train Time (s): mean=60.2033  std=20.1217
+    Epochs Trained: mean=8.3333  std=0.5774
+    MSE: mean=20.8158  std=0.6126
+    MAE: mean=3.5450  std=0.0508
+    MAPE (%): mean=88.3774  std=0.9796
+    MDA (%): mean=46.5967  std=0.5250
+
+=== EXPERIMENT 5 ===
+  deepAR:
+    Train Time (s): mean=993.7667  std=107.3699
+    Epochs Trained: mean=30.3333  std=2.8868
+    MSE: mean=354.5795  std=99.0648
+    MAE: mean=16.8816  std=3.2867
+    MAPE (%): mean=91.9026  std=13.9762
+    MDA (%): mean=75.4400  std=6.3490
+  dlinear:
+    Train Time (s): mean=64.8333  std=24.8631
+    Epochs Trained: mean=19.0000  std=4.3589
+    MSE: mean=75.1141  std=2.2707
+    MAE: mean=7.2179  std=0.1322
+    MAPE (%): mean=27.1727  std=0.5718
+    MDA (%): mean=95.0900  std=0.6062
+  nbeats:
+    Train Time (s): mean=109.4033  std=42.4846
+    Epochs Trained: mean=11.3333  std=1.5275
+    MSE: mean=67.6356  std=18.2631
+    MAE: mean=6.6605  std=1.0560
+    MAPE (%): mean=25.1894  std=4.2784
+    MDA (%): mean=66.3167  std=5.5712
+  tft:
+    Train Time (s): mean=701.1767  std=308.3548
+    Epochs Trained: mean=14.6667  std=5.8595
+    MSE: mean=99.8857  std=7.1228
+    MAE: mean=8.2636  std=0.3917
+    MAPE (%): mean=38.7334  std=3.3017
+    MDA (%): mean=45.6167  std=3.0369
+  tsmixer:
+    Train Time (s): mean=116.8533  std=66.8084
+    Epochs Trained: mean=15.0000  std=2.0000
+    MSE: mean=90.2878  std=13.4507
+    MAE: mean=8.2060  std=0.6723
+    MAPE (%): mean=45.4688  std=3.7810
+    MDA (%): mean=62.4567  std=1.6083
+
+=== Group EXPERIMENT 6 ===
+  deepAR:
+    Train Time (s): mean=1627.3233  std=237.7379
+    Epochs Trained: mean=23.0000  std=2.6458
+    MSE: mean=344.2176  std=111.5610
+    MAE: mean=16.9009  std=3.5028
+    MAPE (%): mean=96.9224  std=18.2874
+    MDA (%): mean=73.1267  std=1.3186
+  dlinear:
+    Train Time (s): mean=58.9000  std=14.8615
+    Epochs Trained: mean=20.6667  std=2.5166
+    MSE: mean=56.0408  std=1.1106
+    MAE: mean=6.2310  std=0.0596
+    MAPE (%): mean=27.1317  std=0.2254
+    MDA (%): mean=84.1200  std=0.6062
+  nbeats:
+    Train Time (s): mean=104.3967  std=37.0372
+    Epochs Trained: mean=10.3333  std=0.5774
+    MSE: mean=62.7361  std=5.0110
+    MAE: mean=6.5881  std=0.3073
+    MAPE (%): mean=28.2868  std=1.4428
+    MDA (%): mean=53.7500  std=1.6830
+  tft:
+    Train Time (s): mean=1225.8967  std=940.4955
+    Epochs Trained: mean=11.3333  std=6.8069
+    MSE: mean=149.9058  std=62.2772
+    MAE: mean=10.0852  std=2.5581
+    MAPE (%): mean=55.9915  std=17.4741
+    MDA (%): mean=45.9000  std=2.6892
+  tsmixer:
+    Train Time (s): mean=50.5033  std=16.0149
+    Epochs Trained: mean=7.0000  std=0.0000
+    MSE: mean=340.3360  std=28.7787
+    MAE: mean=16.9858  std=0.7180
+    MAPE (%): mean=97.1803  std=4.0024
+    MDA (%): mean=56.1967  std=1.6866
+
+=== EXPERIMENT 7 ===
+  deepAR:
+    Train Time (s): mean=538.9033  std=43.6389
+    Epochs Trained: mean=15.0000  std=1.0000
+    MSE: mean=1119964.2133  std=79847.2032
+    MAE: mean=856.2035  std=27.8115
+    MAPE (%): mean=21.5201  std=0.6506
+    MDA (%): mean=40.0000  std=3.1600
+  dlinear:
+    Train Time (s): mean=773.4400  std=132.2198
+    Epochs Trained: mean=17.0000  std=3.0000
+    MSE: mean=56848.0800  std=1025.9296
+    MAE: mean=167.5632  std=2.8082
+    MAPE (%): mean=4.1526  std=0.0802
+    MDA (%): mean=85.9667  std=2.6477
+  nbeats:
+    Train Time (s): mean=104.1367  std=41.9964
+    Epochs Trained: mean=9.0000  std=1.0000
+    MSE: mean=75130.5621  std=21282.5383
+    MAE: mean=188.3502  std=28.3370
+    MAPE (%): mean=4.7973  std=0.6586
+    MDA (%): mean=74.3833  std=1.2182
+  tft:
+    Train Time (s): mean=981.7533  std=518.2223
+    Epochs Trained: mean=12.0000  std=3.0000
+    MSE: mean=505593.0626  std=108703.2719
+    MAE: mean=549.6653  std=86.9427
+    MAPE (%): mean=14.5224  std=2.7303
+    MDA (%): mean=52.9833  std=2.1898
+  tsmixer:
+    Train Time (s): mean=795.0167  std=234.7982
+    Epochs Trained: mean=14.3333  std=4.1633
+    MSE: mean=944600.0728  std=15847.5805
+    MAE: mean=757.6898  std=3.3669
+    MAPE (%): mean=18.9866  std=0.0314
+    MDA (%): mean=38.5967  std=4.9734
+
+=== EXPERIMENT 8 ===
+  deepAR:
+    Train Time (s): mean=1203.9900  std=276.3714
+    Epochs Trained: mean=16.6667  std=4.0415
+    MSE: mean=862181.8812  std=91352.7451
+    MAE: mean=726.4185  std=26.5876
+    MAPE (%): mean=18.8814  std=0.4707
+    MDA (%): mean=38.3933  std=1.0921
+  dlinear:
+    Train Time (s): mean=809.6767  std=84.0202
+    Epochs Trained: mean=14.0000  std=1.0000
+    MSE: mean=47884.4123  std=765.9162
+    MAE: mean=153.0281  std=0.7389
+    MAPE (%): mean=4.0899  std=0.0114
+    MDA (%): mean=85.3400  std=1.0500
+  nbeats:
+    Train Time (s): mean=170.1367  std=48.5019
+    Epochs Trained: mean=11.0000  std=1.0000
+    MSE: mean=70666.7056  std=10272.1918
+    MAE: mean=206.1295  std=16.6892
+    MAPE (%): mean=5.6691  std=0.4872
+    MDA (%): mean=68.0600  std=5.1575
+  tft:
+    Train Time (s): mean=1076.0300  std=91.6850
+    Epochs Trained: mean=7.3333  std=3.2146
+    MSE: mean=697392.3234  std=263762.8083
+    MAE: mean=661.9724  std=134.9502
+    MAPE (%): mean=19.4481  std=4.6529
+    MDA (%): mean=51.6567  std=1.5984
+  tsmixer:
+    Train Time (s): mean=1341.5600  std=55.9907
+    Epochs Trained: mean=9.3333  std=0.5774
+    MSE: mean=821185.1970  std=10868.5034
+    MAE: mean=723.9468  std=8.4412
+    MAPE (%): mean=19.1252  std=0.2265
+    MDA (%): mean=41.3600  std=1.3852
