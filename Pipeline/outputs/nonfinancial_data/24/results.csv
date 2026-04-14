@@ -1,0 +1,6 @@
+Dataset,Target,Model,Horizon,Lookback window,Seed,Train Time (s),Epochs Trained,MSE,MAE,MAPE (%),MDA (%)
+electricity.csv,OT,deepAR,192,768,182519147,1198.14,16,776871.736,700.3438,18.3999,37.17
+electricity.csv,OT,nbeats,192,768,182519147,116.72,12,58809.941,189.7099,5.2366,66.49
+electricity.csv,OT,tsmixer,192,768,182519147,1406.2,10,822712.3536,728.8679,19.2899,40.84
+electricity.csv,OT,tft,192,768,182519147,1004.68,11,988748.1612,804.2871,24.3241,50.26
+electricity.csv,OT,dlinear,192,768,182519147,721.53,15,47083.7737,152.4105,4.077,86.39
