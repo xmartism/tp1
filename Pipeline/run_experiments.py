@@ -1,21 +1,24 @@
 """
-Konfigurácia experimentov a spustenie pipeline.
+Experiment configuration and pipeline runner.
 
-Každá kombinácia (dataset × horizont) sa spustí ako samostatný experiment.
-Výsledky sa ukladajú do:
-  Pipeline/outputs/experiments.csv     – register všetkých experimentov
-  Pipeline/outputs/<id>/               – výstupy a metriky každého experimentu
+Each combination (dataset × horizon) is run as a separate experiment.
+Results are saved to:
+  Pipeline/outputs/experiments.csv     — registry of all experiments
+  Pipeline/outputs/<id>/               — outputs and metrics for each experiment
 
-Príklad spustenia:
+Example:
   python3 Pipeline/run_experiments.py
 """
 
-import argparse
+import os
 import subprocess
 import sys
 import csv
 from pathlib import Path
 import time
+
+# Always run relative to the project root (one level above this script)
+os.chdir(Path(__file__).resolve().parent.parent)
 
 EXPERIMENTS = [
     {
@@ -24,14 +27,15 @@ EXPERIMENTS = [
         "date":     "Formatted Date",
         "horizons": [24, 48],
         "lookback-window": 96,
-        "seed": 42,
+        "stride":   24,
+        "seed":     42,
     },
-    {
-        "dataset":  "Data/ETTh1.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [24, 48, 96],
-    },
+    # {
+    #     "dataset":  "Data/ETTh1.csv",
+    #     "target":   "OT",
+    #     "date":     "date",
+    #     "horizons": [24, 48, 96],
+    # },
 ]
 
 OUTPUTS_ROOT     = Path("Pipeline/outputs")
@@ -40,7 +44,7 @@ EXPERIMENTS_COLS = ["id", "dataset", "target", "date", "horizon", "results_file"
 
 
 def next_experiment_id() -> int:
-    """Vráti nasledujúce ID experimentu (max existujúce + 1, alebo 1)."""
+    """Returns the next experiment ID (max existing + 1, or 1)."""
     if not EXPERIMENTS_FILE.exists():
         return 1
     with open(EXPERIMENTS_FILE, newline="") as f:
@@ -52,7 +56,7 @@ def next_experiment_id() -> int:
 
 def register_experiment(experiment_id: int, dataset: str, target: str, date_col: str,
                          horizon: int, results_file: Path, status: str) -> None:
-    """Zapíše riadok do experiments.csv."""
+    """Appends a row to experiments.csv."""
     OUTPUTS_ROOT.mkdir(parents=True, exist_ok=True)
     write_header = not EXPERIMENTS_FILE.exists()
     with open(EXPERIMENTS_FILE, "a", newline="") as f:
@@ -72,7 +76,7 @@ def register_experiment(experiment_id: int, dataset: str, target: str, date_col:
 
 
 def update_experiment_status(experiment_id: int, status: str) -> None:
-    """Aktualizuje stĺpec 'status' pre daný experiment v experiments.csv."""
+    """Updates the 'status' column for the given experiment in experiments.csv."""
     if not EXPERIMENTS_FILE.exists():
         return
     with open(EXPERIMENTS_FILE, newline="") as f:
@@ -86,20 +90,13 @@ def update_experiment_status(experiment_id: int, status: str) -> None:
         writer.writerows(rows)
 
 
-def experiment_output_dir(experiment_id: int) -> Path:
-    """
-    Vytvorí a vráti cestu:
-      Pipeline/outputs/<experiment_id>/
-    """
-    out_dir = OUTPUTS_ROOT / str(experiment_id)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    return out_dir
-
-
 def run_single_experiment(experiment_id: int, dataset: str, target: str,
                            date_col: str, horizon: int,
-                          lookback_window: int | None = None, seed: int | None = None) -> bool:
-    out_dir = OUTPUTS_ROOT / str(experiment_id)
+                           lookback_window: int | None = None,
+                           stride: int | None = None,
+                           seed: int | None = None) -> bool:
+    """Runs the pipeline for a single experiment and updates its status in experiments.csv."""
+    out_dir      = OUTPUTS_ROOT / str(experiment_id)
     out_dir.mkdir(parents=True, exist_ok=True)
     results_file = out_dir / "results.csv"
 
@@ -109,7 +106,9 @@ def run_single_experiment(experiment_id: int, dataset: str, target: str,
     print(f"#  Target  : {target}")
     print(f"#  Horizon : {horizon}")
     if lookback_window is not None:
-        print(f"#  Lookback-window: {lookback_window}")
+        print(f"#  Lookback: {lookback_window}")
+    if stride is not None:
+        print(f"#  Stride  : {stride}")
     if seed is not None:
         print(f"#  Seed    : {seed}")
     print(f"#  Out dir : {out_dir}")
@@ -119,41 +118,43 @@ def run_single_experiment(experiment_id: int, dataset: str, target: str,
 
     cmd = [
         sys.executable, "Pipeline/pipeline.py",
-        "--dataset",      dataset,
-        "--target",       target,
-        "--date",         date_col,
-        "--horizon",      str(horizon),
-        "--output-dir",   str(out_dir),
-        *(["--lookback-window",  str(lookback_window)] if lookback_window is not None else []),
-        *(["--seed",      str(seed)]     if seed     is not None else []),
+        "--dataset",    dataset,
+        "--target",     target,
+        "--date",       date_col,
+        "--horizon",    str(horizon),
+        "--output-dir", str(out_dir),
+        *(["--lookback-window", str(lookback_window)] if lookback_window is not None else []),
+        *(["--stride",          str(stride)]          if stride          is not None else []),
+        *(["--seed",            str(seed)]             if seed            is not None else []),
     ]
 
     print(f"  CMD: {' '.join(cmd)}\n")
 
-    result = subprocess.run(cmd, text=True)
+    result  = subprocess.run(cmd, text=True)
     success = result.returncode == 0
     update_experiment_status(experiment_id, "success" if success else "failed")
 
     if not success:
-        print(f"\n[ERROR] Experiment {experiment_id} zlyhal (exit code {result.returncode}).",
+        print(f"\n[ERROR] Experiment {experiment_id} failed (exit code {result.returncode}).",
               file=sys.stderr)
     return success
 
-def main():
-    parser = argparse.ArgumentParser(description="Spúšťač experimentov pre forecasting pipeline")
 
-    total   = sum(len(e["horizons"]) for e in EXPERIMENTS)
-    passed  = 0
-    failed  = []
+def main():
+    """Runs all experiments defined in EXPERIMENTS and prints a summary."""
+    total  = sum(len(e["horizons"]) for e in EXPERIMENTS)
+    passed = 0
+    failed = []
 
     experiment_id = next_experiment_id()
 
     for exp_cfg in EXPERIMENTS:
-        dataset  = exp_cfg["dataset"]
-        target   = exp_cfg["target"]
-        date_col = exp_cfg.get("date", "date")
+        dataset         = exp_cfg["dataset"]
+        target          = exp_cfg["target"]
+        date_col        = exp_cfg.get("date", "date")
         lookback_window = exp_cfg.get("lookback-window", None)
-        seed     = exp_cfg.get("seed", None)
+        stride          = exp_cfg.get("stride", None)
+        seed            = exp_cfg.get("seed", None)
 
         for horizon in exp_cfg["horizons"]:
             ok = run_single_experiment(
@@ -163,6 +164,7 @@ def main():
                 date_col=date_col,
                 horizon=horizon,
                 lookback_window=lookback_window,
+                stride=stride,
                 seed=seed,
             )
             if ok:
@@ -172,10 +174,10 @@ def main():
             experiment_id += 1
 
     print(f"\n\n{'='*60}")
-    print(f"  VŠETKY EXPERIMENTY DOKONČENÉ  –  {passed}/{total} úspešných")
+    print(f"  ALL EXPERIMENTS DONE  —  {passed}/{total} succeeded")
     if failed:
-        print(f"  Zlyhané: {', '.join(failed)}")
-    print(f"  Register experimentov: {EXPERIMENTS_FILE}")
+        print(f"  Failed: {', '.join(failed)}")
+    print(f"  Experiment registry: {EXPERIMENTS_FILE}")
     print(f"{'='*60}\n")
 
     sys.exit(0 if not failed else 1)

@@ -1,6 +1,0 @@
-Dataset,Target,Model,Horizon,Train Time (s),MSE,MAE,MAPE (%),DA (%)
-weatherHistory.csv,Temperature (C),deepAR,48,1531.22,296.538,16.5727,92.3436,51.06
-weatherHistory.csv,Temperature (C),nbeats,48,82.58,3.0727,1.4192,9.3337,57.45
-weatherHistory.csv,Temperature (C),tsmixer,48,510.15,391.3889,19.1921,107.2418,51.06
-weatherHistory.csv,Temperature (C),tft,48,235.74,12.7459,2.9058,18.397,55.32
-weatherHistory.csv,Temperature (C),lstm,48,302.71,4.311,1.8469,10.6427,48.94

@@ -43,8 +43,13 @@ Automatizovaný rámec na trénovanie, predikciu a vyhodnotenie časových radov
 │       ├── experiments.csv
 │       └── <experiment_id>/
 │           ├── results.csv
-│           └── <model>_output.txt
-└── requirements.txt
+│           ├── <model>_windows.csv
+│           ├── <model>_per_window.csv
+│           └── <model>_model/
+│               ├── metadata.txt
+│               └── ...          (natrénovaný model)
+├── requirements.txt
+└── install.sh
 ```
 
 ---
@@ -73,7 +78,7 @@ chmod +x install.sh
    - Nahradí `onp.bool` za `bool`
    - Opraví `bool_`, ktorý sa pokazil v predchádzajúcom kroku
    - Opraví `np` na správny alias `onp`
-   
+
    Cesta k súboru sa zistí dynamicky, takže oprava funguje aj v prostredí virtuálneho prostredia (venv) aj bez neho.
 
 5. **Overí inštaláciu mxnet** príkazom `python3 -c "import mxnet; print('mxnet ok')"`.
@@ -90,22 +95,44 @@ chmod +x install.sh
 | TSMixer | `Models/Tsmixer/tsmixer.py` |
 | LTSF-Linear (DLinear) | `Models/LTSF-Linear/run_longExp.py` |
 
+Každý model podporuje dva režimy:
 
-Každý model prijíma rovnaké argumenty:
+### `--mode train`
 
 | Argument | Popis |
 |---|---|
 | `--train-dataset` | cesta k trénovacej množine (škálovaná) |
 | `--val-dataset` | cesta k validačnej množine (škálovaná) |
-| `--test-dataset` | cesta k testovacej množine (škálovaná) |
 | `--target` | názov cieľového stĺpca |
 | `--date` | názov stĺpca s dátumom |
 | `--horizon` | počet krokov predikcie dopredu |
-| `--lookback-window` | dĺžka vstupného okna |
+| `--lookback-window` | počet posledných krokov histórie použitých ako kontext |
+| `--model-dir` | kam uložiť natrénovaný model |
 | `--seed` | seed pre reprodukovateľnosť |
-| `--output` | cesta k výstupnému súboru (JSON) |
 
-Výstupmi každého modelu sú txt súbor s metadátami (aktuálne obsahuje epochu, na ktorej skončilo trénovanie) a csv súbor s predikovanými hodnotami
+### `--mode predict`
+
+| Argument | Popis |
+|---|---|
+| `--context-dataset` | CSV s celou históriou až po začiatok predikovaného okna |
+| `--target` | názov cieľového stĺpca |
+| `--date` | názov stĺpca s dátumom |
+| `--horizon` | počet krokov predikcie dopredu |
+| `--lookback-window` | počet posledných krokov ktoré model použije z kontextu |
+| `--model-dir` | odkiaľ načítať natrénovaný model |
+| `--output` | cesta k výstupnému CSV súboru |
+| `--seed` | seed pre reprodukovateľnosť |
+
+Výstupom každého modelu v predict mode je CSV súbor s predikovanými hodnotami:
+
+```
+timestamp,prediction
+2021-01-01T01:00:00,1.23
+2021-01-01T02:00:00,4.56
+...
+```
+
+Modely ukladajú aj `metadata.txt` do `--model-dir` s informáciou o počte natrénovaných epoch.
 
 ---
 
@@ -113,19 +140,30 @@ Výstupmi každého modelu sú txt súbor s metadátami (aktuálne obsahuje epoc
 
 Model možno spustiť priamo, no je potrebné manuálne pripraviť rozdelené a škálované datasety. Odporúča sa spúšťať cez `pipeline.py`.
 
-Príklad priameho spustenia TFT:
+Príklad priameho spustenia DeepAR:
 
 ```bash
-python3 Models/TFT/tft.py \
+# Trénovanie
+python3 Models/DeepAR/deepAR.py --mode train \
     --train-dataset Data/train.csv \
     --val-dataset   Data/val.csv \
-    --test-dataset  Data/test.csv \
     --target        "Temperature (C)" \
     --date          "Formatted Date" \
     --horizon       24 \
     --lookback-window 96 \
-    --seed          42 \
-    --output        output.txt
+    --model-dir     models/deepAR \
+    --seed          42
+
+# Predikcia
+python3 Models/DeepAR/deepAR.py --mode predict \
+    --context-dataset Data/history.csv \
+    --target          "Temperature (C)" \
+    --date            "Formatted Date" \
+    --horizon         24 \
+    --lookback-window 96 \
+    --model-dir       models/deepAR \
+    --output          output.csv \
+    --seed            42
 ```
 
 ---
@@ -134,10 +172,11 @@ python3 Models/TFT/tft.py \
 
 `pipeline.py` zabezpečuje:
 1. načítanie a chronologické rozdelenie datasetu (70 % train / 15 % val / 15 % test)
-2. normalizáciu pomocou `StandardScaler` fitovaného **iba na trénovacích dátach**
-3. spustenie všetkých aktívnych modelov na škálovaných dátach
-4. odškálovanie predikcií späť na pôvodné hodnoty (inverse transform)
-5. vyhodnotenie predikcií oproti pôvodnému (neškálovanému) testovaciemu setu
+2. normalizáciu všetkých číselných stĺpcov pomocou `StandardScaler` fitovaného **iba na trénovacích dátach**
+3. trénovanie každého modelu raz na train+val dátach
+4. predikciu pomocou sliding window cez celý test set
+5. odškálovanie predikcií späť na pôvodné hodnoty
+6. vyhodnotenie predikcií oproti pôvodnému (neškálovanému) testovaciemu setu
 
 ```bash
 python3 Pipeline/pipeline.py \
@@ -146,6 +185,7 @@ python3 Pipeline/pipeline.py \
     --date            "Formatted Date" \
     --horizon         24 \
     --lookback-window 96 \
+    --stride          24 \
     --seed            42 \
     --output-dir      Pipeline/outputs/1
 ```
@@ -158,7 +198,8 @@ python3 Pipeline/pipeline.py \
 | `--target` | áno | — | názov cieľového stĺpca |
 | `--date` | nie | `"date"` | názov stĺpca s dátumom |
 | `--horizon` | áno | — | počet krokov predikcie |
-| `--lookback-window` | nie | `4 × horizon` | dĺžka vstupného okna |
+| `--lookback-window` | nie | `4 × horizon` | počet posledných krokov histórie použitých ako kontext |
+| `--stride` | nie | `horizon` | posun sliding window (stride=horizon → non-overlapping okná) |
 | `--seed` | nie | náhodný | seed pre reprodukovateľnosť |
 | `--output-dir` | nie | `Pipeline/outputs` | priečinok pre výstupy |
 
@@ -216,7 +257,7 @@ Register všetkých spustených experimentov:
 
 ### `Pipeline/outputs/<id>/results.csv`
 
-Výsledky metrík pre každý model v danom experimente:
+Agregované výsledky metrík pre každý model (priemer cez všetky sliding windows):
 
 | Stĺpec | Popis |
 |---|---|
@@ -224,27 +265,35 @@ Výsledky metrík pre každý model v danom experimente:
 | `Target` | cieľový stĺpec |
 | `Model` | názov modelu |
 | `Horizon` | predikčný horizont |
-| `Lookback window` | dĺžka vstupného okna |
+| `Lookback window` | dĺžka kontextového okna |
+| `Stride` | posun sliding window |
+| `Num Windows` | počet sliding windows |
 | `Seed` | použitý seed |
 | `Train Time (s)` | čas trénovania v sekundách |
+| `Epochs Trained` | počet natrénovaných epoch |
 | `MSE` | stredná kvadratická chyba |
 | `MAE` | stredná absolútna chyba |
 | `MAPE (%)` | stredná absolútna percentuálna chyba |
-| `DA (%)` | smerová presnosť |
+| `MDA (%)` | smerová presnosť |
+
+### `Pipeline/outputs/<id>/<model>_per_window.csv`
+
+Metriky pre každé sliding window zvlášť — rovnaké stĺpce ako `results.csv` plus `Window`, `Window_Start_TS`, `Window_End_TS`.
 
 ---
 
 ## Metriky
 
-Všetky metriky sa počítajú oproti **pôvodným neškálovaným hodnotám** testovacej množiny.
+Všetky metriky sa počítajú oproti **pôvodným neškálovaným hodnotám** testovacej množiny, agregované cez všetky sliding windows.
 
 **MSE** — penalizuje väčšie odchýlky kvadraticky, citlivejšia na odľahlé hodnoty:
-$$\text{MSE} = \frac{1}{h} \sum_{i=1}^{h} (y_i - \hat{y}_i)^2$$
+$$\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
 
 **MAE** — priemerná veľkosť chyby v pôvodných jednotkách:
-$$\text{MAE} = \frac{1}{h} \sum_{i=1}^{h} |y_i - \hat{y}_i|$$
+$$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$$
 
-**MAPE** — chyba relatívne voči skutočným hodnotám (chránená proti deleniu nulou hodnotou $\varepsilon = 10^{-8}$):
-$$\text{MAPE} = \frac{100}{h} \sum_{i=1}^{h} \left| \frac{y_i - \hat{y}_i}{\max(|y_i|, \varepsilon)} \right|$$
+**MAPE** — chyba relatívne voči skutočným hodnotám. Chránená proti deleniu nulou: ak $y_i = 0$, použije sa $\varepsilon = 10^{-8}$ namiesto $y_i$:
+$$\text{MAPE} = \frac{100}{n} \sum_{i=1}^{n} \left| \frac{y_i - \hat{y}_i}{y_i} \right|$$
 
-**DA (Directional Accuracy)** — percento krokov kde predikcia správne odhadla smer zmeny (rast/pokles) voči predchádzajúcej skutočnej hodnote. Pri horizonte 1 nie je definovaná (`N/A`).
+**MDA (Mean Directional Accuracy)** — percento krokov kde predikcia správne odhadla smer zmeny (rast/pokles) voči predchádzajúcemu kroku. Porovnáva sa smer skutočných hodnôt so smerom predikcií. Pri horizonte 1 nie je definovaná (`N/A`):
+$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} \mathbf{1}\left[\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})\right]$$

@@ -1,6 +1,0 @@
-Dataset,Target,Model,Horizon,Train Time (s),MSE,MAE,MAPE (%),DA (%)
-ETTh1.csv,OT,deepAR,48,718.14,5.2254,1.9444,33.4046,63.83
-ETTh1.csv,OT,nbeats,48,18.02,4.6798,1.7482,23.586,53.19
-ETTh1.csv,OT,tsmixer,48,119.6,64.3992,7.86,113.3369,48.94
-ETTh1.csv,OT,tft,48,44.49,12.094,2.7967,43.4051,46.81
-ETTh1.csv,OT,lstm,48,31.1,5.6387,2.0131,26.3207,51.06
