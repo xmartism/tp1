@@ -2,13 +2,15 @@ import argparse
 import sys
 import os
 from pathlib import Path
-import torch
+import json
+
 import pandas as pd
 import numpy as np
-import json
+import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.loggers import CSVLogger
 
 from darts import TimeSeries
 from darts.models import NBEATSModel
@@ -17,10 +19,7 @@ from darts.utils.missing_values import fill_missing_values
 import warnings
 import logging
 
-# 1. Ignoruje všetky bežné Python varovania (napr. tie o časových zónach a starom kóde)
 warnings.filterwarnings("ignore")
-
-# 2. Nastaví úroveň logovania pre PyTorch Lightning a Darts iba na skutočné CHYBY (ERROR)
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(logging.ERROR)
 logging.getLogger("darts").setLevel(logging.ERROR)
@@ -28,130 +27,199 @@ logging.getLogger("darts").setLevel(logging.ERROR)
 torch.set_float32_matmul_precision('medium')
 
 
-def main():
-    parser = argparse.ArgumentParser(description="N-BEATS model pre pipeline")
-    parser.add_argument("--train-dataset", required=True, help="Cesta k train.csv")
-    parser.add_argument("--val-dataset", required=True, help="Cesta k val.csv")
-    parser.add_argument("--test-dataset", required=True, help="Cesta k test.csv")
-    parser.add_argument("--target", required=True, help="Nazov cieloveho stlpca")
-    parser.add_argument("--date", required=True, help="Nazov stlpca s datumom")
-    parser.add_argument("--horizon", type=int, required=True, help="Pocet krokov predikcie")
-    parser.add_argument("--output", required=True, help="Cesta k vystupnemu textovemu suboru")
+# ---------------------------------------------------------------------------
+# Dátové funkcie
+# ---------------------------------------------------------------------------
 
-    # NOVÉ PARAMETRE
-    parser.add_argument("--lookback-window", type=int, default=None, help="Dlzka vstupneho okna (default: 4 * horizon)")
-    parser.add_argument("--seed", type=int, default=42, help="Seed pre reprodukovatelnost")
-    args = parser.parse_args()
+def load_data_to_timeseries(filepath, date_col, target_col):
+    """Načíta CSV a vytvorí TimeSeries pre target aj kovariáty."""
+    df = pd.read_csv(filepath)
+    df = df.drop_duplicates(subset=[date_col], keep='first')
 
-    # Nastavenie seedu pre PyTorch a Numpy (reprodukovateľnosť)
+    # Automatické zistenie frekvencie
+    temp_dates = pd.DatetimeIndex(pd.to_datetime(df[date_col], utc=True))
+    zistena_frekvencia = pd.infer_freq(temp_dates[:10]) or 'D'
+
+    # Kovariáty
+    covariate_cols = [
+        col for col in df.columns
+        if col not in [date_col, target_col] and pd.api.types.is_numeric_dtype(df[col])
+    ]
+
+    # Target series
+    target_series = TimeSeries.from_dataframe(
+        df, time_col=date_col, value_cols=target_col,
+        fill_missing_dates=True, freq=zistena_frekvencia
+    )
+    target_series = fill_missing_values(target_series, fill='auto')
+
+    # Covariate series
+    cov_series = None
+    if covariate_cols:
+        cov_series = TimeSeries.from_dataframe(
+            df, time_col=date_col, value_cols=covariate_cols,
+            fill_missing_dates=True, freq=zistena_frekvencia
+        )
+        cov_series = fill_missing_values(cov_series, fill='auto')
+
+    return target_series, cov_series
+
+
+# ---------------------------------------------------------------------------
+# Mód: TRAIN
+# ---------------------------------------------------------------------------
+
+def mode_train(args):
     pl.seed_everything(args.seed, workers=True)
 
-    print(f"[N-BEATS] Načítavam dáta...")
-    try:
-        df_train = pd.read_csv(args.train_dataset)
-        df_val = pd.read_csv(args.val_dataset)
-        df_test = pd.read_csv(args.test_dataset)
+    print("[N-BEATS] Načítavam dáta na trénovanie...")
+    train_target, train_cov = load_data_to_timeseries(args.train_dataset, args.date, args.target)
+    val_target, val_cov = load_data_to_timeseries(args.val_dataset, args.date, args.target)
 
-        # --- Odstránenie duplicitných časov ---
-        df_train = df_train.drop_duplicates(subset=[args.date], keep='first')
-        df_val = df_val.drop_duplicates(subset=[args.date], keep='first')
-        df_test = df_test.drop_duplicates(subset=[args.date], keep='first')
+    lookback = args.lookback_window if args.lookback_window else 4 * args.horizon
 
-    except Exception as e:
-        print(f"[ERROR] Zlyhalo načítanie CSV súborov: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        # 1. Automatické zistenie frekvencie z prvých 10 riadkov
-        temp_dates = pd.DatetimeIndex(pd.to_datetime(df_train[args.date], utc=True))
-        zistena_frekvencia = pd.infer_freq(temp_dates[:10])
-
-        if zistena_frekvencia is None:
-            print("[WARN] Nepodarilo sa zistiť frekvenciu automaticky. Použijem default 'D' (Dni).")
-            zistena_frekvencia = 'D'
-        else:
-            print(f"[N-BEATS] Automaticky zistená frekvencia dát: {zistena_frekvencia}")
-
-        # 2. Vytvorenie TimeSeries s dynamickou frekvenciou
-        series_train = TimeSeries.from_dataframe(df_train, time_col=args.date, value_cols=args.target,
-                                                 fill_missing_dates=True, freq=zistena_frekvencia)
-        series_val = TimeSeries.from_dataframe(df_val, time_col=args.date, value_cols=args.target,
-                                               fill_missing_dates=True, freq=zistena_frekvencia)
-        series_test = TimeSeries.from_dataframe(df_test, time_col=args.date, value_cols=args.target,
-                                                fill_missing_dates=True, freq=zistena_frekvencia)
-
-        series_train = fill_missing_values(series_train, fill='auto')
-        series_val = fill_missing_values(series_val, fill='auto')
-        series_test = fill_missing_values(series_test, fill='auto')
-    except Exception as e:
-        print(f"[ERROR] Problém s vytváraním TimeSeries: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    # Spojenie train a val pre potreby histórie pri predikcii
-    train_val_series = series_train.append(series_val)
-
-    # NOVÉ: Lookback window logika
-    lookback = args.lookback_window if args.lookback_window is not None else 4 * args.horizon
-
-    if len(series_train) <= lookback + args.horizon:
-        print(f"[ERROR] Trénovací set je príliš krátky pre lookback {lookback} a horizon {args.horizon}.",
-              file=sys.stderr)
-        sys.exit(1)
-
-    # NOVÉ: Nastavenie Early Stopping
     early_stopper = EarlyStopping(
         monitor="val_loss",
-        patience=5,  # Kolko epôch bez zlepšenia sa má čakať
-        min_delta=0.001,  # Minimálne zlepšenie, aby sa počítalo ako "zlepšenie"
+        patience=10,
+        min_delta=1e-4,
         mode="min",
     )
 
-    print(f"[N-BEATS] Trénujem model (Lookback: {lookback}, Horizon: {args.horizon}, Seed: {args.seed})...")
+    model_dir = Path(args.model_dir)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    csv_logger = CSVLogger(save_dir=str(model_dir), name="logs")
+
     model = NBEATSModel(
         input_chunk_length=lookback,
         output_chunk_length=args.horizon,
         generic_architecture=True,
         num_stacks=30,
         layer_widths=512,
-        n_epochs=50,  # Zvýšené na 50, aby mal early stopping šancu zafungovať (pôvodne bolo 3)
+        n_epochs=50,
         batch_size=1024,
         random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "auto",
             "devices": 1 if torch.cuda.is_available() else "auto",
             "enable_progress_bar": False,
-            "logger": False,
-            "callbacks": [early_stopper]  # Pridaný callback pre Early Stopping
+            "logger": csv_logger,
+            "callbacks": [early_stopper]
         }
     )
 
-    # NOVÉ: Do fit pridávame aj val_series, inak nebude fungovať val_loss pri Early Stopping
-    model.fit(series=series_train, val_series=series_val, verbose=False)
+    fit_kwargs = {"series": train_target, "val_series": val_target, "verbose": False}
+    if train_cov is not None:
+        fit_kwargs["past_covariates"] = train_cov
+        fit_kwargs["val_past_covariates"] = val_cov
 
-    # Zistenie, na ktorej epoche sa model zastavil
+    print("[N-BEATS] Spúšťam trénovanie...")
+    model.fit(**fit_kwargs)
+
+    # Uloženie modelu na disk
+    model_path = model_dir / "nbeats_model.pt"
+    model.save(str(model_path))
+    print(f"[N-BEATS] Model uložený do {model_path}")
+
+    # Uloženie metadát
     stopped_epoch = model.trainer.current_epoch
-    print(f"[N-BEATS] Trénovanie skončilo na epoche: {stopped_epoch}")
+    with open(model_dir / "metadata.txt", "w", encoding="utf-8") as f:
+        f.write(f"epoch: {stopped_epoch}\n")
 
-    print(f"[N-BEATS] Vytváram predikciu...")
-    # Predikujeme z train_val histórie
-    prediction = model.predict(n=args.horizon, series=train_val_series)
 
-    # Extrahujeme predikcie do obyčajného Python listu
-    pred_list = prediction.values().flatten().tolist()
+# ---------------------------------------------------------------------------
+# Mód: PREDICT
+# ---------------------------------------------------------------------------
 
-    print(f"[N-BEATS] Zapisujem výsledky do {args.output}")
-    with open(args.output, "w", encoding="utf-8") as f:
-        json.dump(pred_list, f)
+# ---------------------------------------------------------------------------
+# Mód: PREDICT
+# ---------------------------------------------------------------------------
 
-    # NOVÉ: Uloženie metadát o ukončenej epoche
-    out_path = Path(args.output)
-    metadata_file = out_path.parent / "nbeats_metadata.txt"
+def mode_predict(args):
+    pl.seed_everything(args.seed, workers=True)
 
-    with open(metadata_file, "w", encoding="utf-8") as meta_f:
-        meta_f.write(f"epoch: {stopped_epoch}\n")
-    print(f"[N-BEATS] Metadáta uložené do {metadata_file}")
+    model_dir = Path(args.model_dir)
+    model_path = model_dir / "nbeats_model.pt"
 
-    print(f"[N-BEATS] Hotovo!")
+    if not model_path.exists():
+        print(f"[ERROR] Model nenasiel: {model_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # -----------------------------------------------------------------------
+    # FIX PRE PYTORCH 2.6+
+    # PyTorch 2.6 zmenil defaultné správanie načítavania na weights_only=True.
+    # Urobíme dočasný monkeypatch, aby sme povolili načítanie nášho modelu.
+    # -----------------------------------------------------------------------
+    import torch
+    original_load = torch.load
+
+    def patched_load(*a, **kw):
+        kw['weights_only'] = False
+        return original_load(*a, **kw)
+
+    torch.load = patched_load
+
+    try:
+        # Načítanie uloženého modelu
+        model = NBEATSModel.load(str(model_path))
+    finally:
+        # Vrátenie pôvodnej funkcie torch.load hneď po načítaní
+        torch.load = original_load
+    # -----------------------------------------------------------------------
+
+    # Načítanie histórie (context)
+    context_target, context_cov = load_data_to_timeseries(args.context_dataset, args.date, args.target)
+
+    predict_kwargs = {"n": args.horizon, "series": context_target}
+    if context_cov is not None:
+        predict_kwargs["past_covariates"] = context_cov
+
+    # Predikcia
+    prediction = model.predict(**predict_kwargs)
+
+    # Formátovanie na rovnaký výstup ako má DeepAR (CSV: timestamp, prediction)
+    timestamps = [ts.isoformat() for ts in prediction.time_index]
+    preds = prediction.values().flatten().tolist()
+
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame({
+        "timestamp": timestamps,
+        "prediction": preds
+    }).to_csv(output_path, index=False)
+
+    print(f"[N-BEATS] Predikcia uložená do {output_path}")
+
+
+# ---------------------------------------------------------------------------
+# Hlavný parser (zhodný s pipeline)
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="N-BEATS model kompatibilný s pipeline")
+    parser.add_argument("--mode", choices=["train", "predict"], required=True)
+
+    parser.add_argument("--train-dataset", help="Cesta k train.csv")
+    parser.add_argument("--val-dataset", help="Cesta k val.csv")
+    parser.add_argument("--context-dataset", help="História pre predikciu")
+    parser.add_argument("--target", required=True, help="Názov cieľového stĺpca")
+    parser.add_argument("--date", default="date", help="Názov stĺpca s dátumom")
+    parser.add_argument("--horizon", type=int, required=True, help="Počet krokov predikcie")
+    parser.add_argument("--lookback-window", type=int, default=None)
+    parser.add_argument("--output", help="Cesta k CSV výstupu (pre predict)")
+    parser.add_argument("--model-dir", required=True, help="Priečinok pre uloženie/načítanie modelu")
+    parser.add_argument("--seed", type=int, default=42)
+
+    args = parser.parse_args()
+
+    if args.mode == "train":
+        if not args.train_dataset or not args.val_dataset:
+            parser.error("--mode train vyžaduje --train-dataset a --val-dataset")
+        mode_train(args)
+    elif args.mode == "predict":
+        if not args.context_dataset or not args.output:
+            parser.error("--mode predict vyžaduje --context-dataset a --output")
+        mode_predict(args)
 
 
 if __name__ == "__main__":
