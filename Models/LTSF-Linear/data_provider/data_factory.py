@@ -1,6 +1,7 @@
 from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_Pred
 from torch.utils.data import DataLoader
 
+
 data_dict = {
     'ETTh1': Dataset_ETT_hour,
     'ETTh2': Dataset_ETT_hour,
@@ -28,7 +29,7 @@ def data_provider(args, flag):
         batch_size = 1
         freq = args.freq
         Data = Dataset_Pred
-        name = args.val_dataset
+        name = args.context_dataset
     else:
         if flag == 'val':
             name = args.val_dataset
@@ -49,7 +50,7 @@ def data_provider(args, flag):
         timeenc=timeenc,
         freq=freq,
         train_only=train_only,
-        date=args.date
+        date=args.date,
     )
     print(flag, len(data_set))
 
@@ -58,5 +59,6 @@ def data_provider(args, flag):
         batch_size=batch_size,
         shuffle=shuffle_flag,
         num_workers=args.num_workers,
-        drop_last=drop_last)
+        drop_last=drop_last,
+    )
     return data_set, data_loader
