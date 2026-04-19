@@ -1,8 +1,7 @@
-from data_provider.data_factory import data_provider
-from exp.exp_basic import Exp_Basic
-from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear
-from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
-from utils.metrics import metric
+import os
+import time
+import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,31 +9,25 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-import os
-import time
-import sys
-
-import warnings
-import matplotlib.pyplot as plt
-import numpy as np
-
-from pathlib import Path
+from data_provider.data_factory import data_provider
+from exp.exp_basic import Exp_Basic
+from models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear
+from utils.metrics import metric
+from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
 
 warnings.filterwarnings('ignore')
 
+
 class Exp_Main(Exp_Basic):
     def __init__(self, args):
-        # 1. Temporarily get the data to see how many columns we have
-        # We do this BEFORE super().__init__ because super calls _build_model
-        temp_data, _ = data_provider(args, flag='train')
+        dimension_flag = 'pred' if getattr(args, 'mode', 'train') == 'predict' else 'train'
+        temp_data, _ = data_provider(args, flag=dimension_flag)
 
-        # 2. Update the args dynamically
-        # .shape[1] gives the number of columns in your processed df_data
         num_features = temp_data.data_x.shape[1]
         args.enc_in = num_features
         args.dec_in = num_features
 
-        print(f"--- Dynamic Dimension Check: Found {num_features} features ---")
+        print(f'--- Dynamic Dimension Check: Found {num_features} features ---')
 
         super(Exp_Main, self).__init__(args)
 
@@ -58,29 +51,40 @@ class Exp_Main(Exp_Basic):
         return data_set, data_loader
 
     def _select_optimizer(self):
-        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-        return model_optim
+        return optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
 
     def _select_criterion(self):
-        criterion = nn.MSELoss()
-        return criterion
+        return nn.MSELoss()
+
+    def _model_dir(self):
+        model_dir = Path(self.args.model_dir)
+        model_dir.mkdir(parents=True, exist_ok=True)
+        return model_dir
+
+    def _checkpoint_path(self):
+        return self._model_dir() / 'checkpoint.pth'
+
+    def _metadata_path(self):
+        return self._model_dir() / 'metadata.txt'
+
+    def _write_metadata(self, epoch_count):
+        with open(self._metadata_path(), 'w') as f:
+            f.write(f'epoch: {epoch_count}')
 
     def vali(self, vali_data, vali_loader, criterion):
         total_loss = []
         f_dim = vali_data.df_data.columns.get_loc(self.args.target)
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+            for batch_x, batch_y, batch_x_mark, batch_y_mark in vali_loader:
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
-
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.horizon:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-                # encoder - decoder
+
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if 'Linear' in self.args.model:
@@ -98,61 +102,54 @@ class Exp_Main(Exp_Basic):
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+
                 outputs = outputs[:, -self.args.horizon:, f_dim:f_dim + 1]
                 batch_y = batch_y[:, -self.args.horizon:, f_dim:f_dim + 1].to(self.device)
 
                 pred = outputs.detach().cpu()
                 true = batch_y.detach().cpu()
-
                 loss = criterion(pred, true)
-
                 total_loss.append(loss)
+
         total_loss = np.average(total_loss)
         self.model.train()
         return total_loss
 
     def train(self, setting):
-        ES = False
+        trained_epochs = 0
         train_data, train_loader = self._get_data(flag='train')
         f_dim = train_data.df_data.columns.get_loc(self.args.target)
         if not self.args.train_only:
             vali_data, vali_loader = self._get_data(flag='val')
 
-        path = os.path.join(self.args.checkpoints, setting)
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        time_now = time.time()
-
+        model_dir = self._model_dir()
         train_steps = len(train_loader)
         early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
-
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
 
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        time_now = time.time()
+
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
-
             self.model.train()
             epoch_time = time.time()
+
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
                 batch_x = batch_x.float().to(self.device)
-
                 batch_y = batch_y.float().to(self.device)
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.horizon:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
-                # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if 'Linear' in self.args.model:
@@ -169,24 +166,23 @@ class Exp_Main(Exp_Basic):
                         train_loss.append(loss.item())
                 else:
                     if 'Linear' in self.args.model:
-                            outputs = self.model(batch_x)
+                        outputs = self.model(batch_x)
                     else:
                         if self.args.output_attention:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-                            
                         else:
-                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, batch_y)
-                    # print(outputs.shape,batch_y.shape)
+                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+
                     outputs = outputs[:, -self.args.horizon:, f_dim:f_dim + 1]
                     batch_y = batch_y[:, -self.args.horizon:, f_dim:f_dim + 1].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
 
                 if (i + 1) % 100 == 0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
+                    print(f'\titers: {i + 1}, epoch: {epoch + 1} | loss: {loss.item():.7f}')
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
+                    print(f'\tspeed: {speed:.4f}s/iter; left time: {left_time:.4f}s')
                     iter_count = 0
                     time_now = time.time()
 
@@ -198,47 +194,38 @@ class Exp_Main(Exp_Basic):
                     loss.backward()
                     model_optim.step()
 
-            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
+            print(f'Epoch: {epoch + 1} cost time: {time.time() - epoch_time}')
             train_loss = np.average(train_loss)
+            trained_epochs = epoch + 1
+
             if not self.args.train_only:
                 vali_loss = self.vali(vali_data, vali_loader, criterion)
-
-                print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
-                    epoch + 1, train_steps, train_loss, vali_loss))
-                early_stopping(vali_loss, self.model, path)
+                print(
+                    'Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}'.format(
+                        epoch + 1, train_steps, train_loss, vali_loss
+                    )
+                )
+                early_stopping(vali_loss, self.model, str(model_dir))
             else:
-                print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}".format(
-                    epoch + 1, train_steps, train_loss))
-                early_stopping(train_loss, self.model, path)
+                print('Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}'.format(epoch + 1, train_steps, train_loss))
+                early_stopping(train_loss, self.model, str(model_dir))
 
             if early_stopping.early_stop:
-                print("Early stopping")
-                myPath = Path(self.args.output)
-                meta_output = str(myPath.parent) + "/dlinear_metadata.txt"
-                with open(meta_output, "w") as f:
-                    f.write(f"epoch: {epoch}")
-                ES = True
+                print('Early stopping')
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 
-        best_model_path = path + '/' + 'checkpoint.pth'
-        self.model.load_state_dict(torch.load(best_model_path))
-        
-        if not ES:
-            myPath = Path(self.args.output)
-            meta_output = str(myPath.parent) + "/dlinear_metadata.txt"
-            with open(meta_output, "w") as f:
-                f.write(f"epoch: {self.args.train_epochs}")
-
+        self.model.load_state_dict(torch.load(self._checkpoint_path()))
+        self._write_metadata(trained_epochs)
         return self.model
 
     def test(self, setting, test=0):
         test_data, test_loader = self._get_data(flag='test')
-        
+
         if test:
             print('loading model')
-            self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
+            self.model.load_state_dict(torch.load(self._checkpoint_path()))
 
         preds = []
         trues = []
@@ -252,14 +239,11 @@ class Exp_Main(Exp_Basic):
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
-
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.horizon:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-                # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if 'Linear' in self.args.model:
@@ -271,59 +255,51 @@ class Exp_Main(Exp_Basic):
                                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
                 else:
                     if 'Linear' in self.args.model:
-                            outputs = self.model(batch_x)
+                        outputs = self.model(batch_x)
                     else:
                         if self.args.output_attention:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-
                         else:
                             outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
-                # print(outputs.shape,batch_y.shape)
                 outputs = outputs[:, -self.args.horizon:, f_dim:]
                 batch_y = batch_y[:, -self.args.horizon:, f_dim:].to(self.device)
                 outputs = outputs.detach().cpu().numpy()
                 batch_y = batch_y.detach().cpu().numpy()
 
-                pred = outputs  # outputs.detach().cpu().numpy()  # .squeeze()
-                true = batch_y  # batch_y.detach().cpu().numpy()  # .squeeze()
+                pred = outputs
+                true = batch_y
 
                 preds.append(pred)
                 trues.append(true)
                 inputx.append(batch_x.detach().cpu().numpy())
                 if i % 20 == 0:
-                    input = batch_x.detach().cpu().numpy()
-                    gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                    pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    input_array = batch_x.detach().cpu().numpy()
+                    gt = np.concatenate((input_array[0, :, -1], true[0, :, -1]), axis=0)
+                    pd_line = np.concatenate((input_array[0, :, -1], pred[0, :, -1]), axis=0)
+                    visual(gt, pd_line, os.path.join(folder_path, str(i) + '.pdf'))
 
         if self.args.test_flop:
-            test_params_flop((batch_x.shape[1],batch_x.shape[2]))
+            test_params_flop((batch_x.shape[1], batch_x.shape[2]))
             exit()
-            
+
         preds = np.concatenate(preds, axis=0)
         trues = np.concatenate(trues, axis=0)
         inputx = np.concatenate(inputx, axis=0)
 
-        # result save
         folder_path = './results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
         mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
         print('mse:{}, mae:{}'.format(mse, mae))
-        f = open("result.txt", 'a')
-        f.write(setting + "  \n")
-        f.write('mse:{}, mae:{}, rse:{}, corr:{}'.format(mse, mae, rse, corr))
-        f.write('\n')
-        f.write('\n')
-        f.close()
+        with open('result.txt', 'a') as f:
+            f.write(setting + '  \n')
+            f.write('mse:{}, mae:{}, rse:{}, corr:{}'.format(mse, mae, rse, corr))
+            f.write('\n\n')
 
-        # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe,rse, corr]))
         np.save(folder_path + 'pred.npy', preds)
-        # np.save(folder_path + 'true.npy', trues)
-        # np.save(folder_path + 'x.npy', inputx)
         return
 
     def predict(self, setting, load=False):
@@ -331,23 +307,18 @@ class Exp_Main(Exp_Basic):
         target_index = pred_data.df_data.columns.get_loc(self.args.target)
 
         if load:
-            path = os.path.join(self.args.checkpoints, setting)
-            best_model_path = path + '/' + 'checkpoint.pth'
-            self.model.load_state_dict(torch.load(best_model_path))
+            self.model.load_state_dict(torch.load(self._checkpoint_path(), map_location=self.device))
 
         preds = []
-
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
+            for batch_x, batch_y, batch_x_mark, batch_y_mark in pred_loader:
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input
-                dec_inp = torch.zeros([batch_y.shape[0], self.args.horizon, batch_y.shape[2]]).float().to(
-                    batch_y.device)
+                dec_inp = torch.zeros([batch_y.shape[0], self.args.horizon, batch_y.shape[2]]).float().to(batch_y.device)
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
                 if 'Linear' in self.args.model:
@@ -358,44 +329,23 @@ class Exp_Main(Exp_Basic):
                     else:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
-                # --- KEY ADDITION: SLICE FOR MS TASK ---
-                # This mirrors the logic in your train() and vali() functions
-                # SLICE DYNAMICALLY
-                # Instead of -1, we use the specific index found above
                 outputs = outputs[:, -self.args.horizon:, target_index:target_index + 1]
+                preds.append(outputs.detach().cpu().numpy())
 
-                pred = outputs.detach().cpu().numpy()
-                preds.append(pred)
+        preds = np.concatenate(np.array(preds), axis=0)
+        final_values = preds[0].reshape(-1)
+        matched_dates = list(pred_data.future_dates)[-len(final_values):]
 
-        preds = np.array(preds)
-        preds = np.concatenate(preds, axis=0)
-
-        # 1. Process predictions (preds[0] is now [24, 1])
-        if (pred_data.scale):
-            real_preds = pred_data.inverse_transform(preds[0])
-        else:
-            real_preds = preds[0]
-
-        # Flatten now safely results in 24 values because we sliced to 1 dimension above
-        final_values = real_preds.flatten()
-        horizon = len(final_values)
-
-        # 2. Align the dates
-        all_dates = list(pred_data.future_dates)
-        matched_dates = all_dates[-horizon:]
-
-        # 3. CONSOLE: Print as a nice DataFrame
-        df_console = pd.DataFrame({
-            'date': matched_dates,
-            self.args.target: final_values
+        df_output = pd.DataFrame({
+            'timestamp': [pd.Timestamp(ts).isoformat() for ts in matched_dates],
+            'prediction': final_values,
         })
 
-        print(f"\n>>>> Forecast for next {horizon} steps <<<<")
-        print(df_console.to_string(index=False))
+        output_path = Path(self.args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        df_output.to_csv(output_path, index=False)
 
-        # 4. FILE: Write as a raw array/list
-        with open(self.args.output, "w") as f:
-            f.write(str(final_values.tolist()))
-
-        print(f"\nRaw array saved to: {self.args.output}")
-        return
+        print(f'\n>>>> Forecast for next {len(final_values)} steps <<<<')
+        print(df_output.to_string(index=False))
+        print(f'\nCSV saved to: {output_path}')
+        return df_output
