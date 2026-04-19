@@ -66,10 +66,10 @@ MODELS = [
     #     "name": "nbeats",
     #     "script": "Models/NBeats/NBeats.py",
     # },
-    # {
-    #     "name": "tsmixer",
-    #     "script": "Models/Tsmixer/tsmixer.py",
-    # },
+    {
+        "name": "tsmixer",
+        "script": "Models/Tsmixer/tsmixer.py",
+    },
     # {
     #     "name": "tft",
     #     "script": "Models/TFT/tft.py",
