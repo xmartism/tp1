@@ -1,0 +1,2 @@
+Dataset,Target,Model,Horizon,Lookback window,Stride,Num Windows,Seed,Train Time (s),Epochs Trained,MSE,MAE,MAPE (%),MDA (%)
+weatherHistory.csv,Temperature (C),tft,24,96,24,602,42,15.79,15,11.0465,2.6153,11339540.7268,55.21
