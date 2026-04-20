@@ -1,18 +1,24 @@
 import argparse
 import sys
-import torch
+import os
+from pathlib import Path
+import json
+
 import pandas as pd
 import numpy as np
-import json
-import logging
-import warnings
-from pathlib import Path
+import torch
+
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.loggers import CSVLogger
+from pytorch_lightning.callbacks import Callback
 
 from darts import TimeSeries
 from darts.models import TFTModel
 from darts.utils.missing_values import fill_missing_values
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.callbacks import Callback
+
+import warnings
+import logging
 
 # 1. Ignorovanie varovaní a nastavenie logovania
 warnings.filterwarnings("ignore")
@@ -23,87 +29,80 @@ logging.getLogger("darts").setLevel(logging.ERROR)
 torch.set_float32_matmul_precision('medium')
 
 
-# 2. Vlastný callback na výpis progresu pre pipeline logy
-
+# ---------------------------------------------------------------------------
+# Vlastný callback na výpis progresu pre pipeline logy
+# ---------------------------------------------------------------------------
 class PipelineProgressCallback(Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        # Vypíše progres každých 10 dávok (môžeš zmeniť podľa veľkosti datasetu)
         if batch_idx % 10 == 0:
             epoch = trainer.current_epoch + 1
             max_epochs = trainer.max_epochs
             total_batches = trainer.num_training_batches
 
-            # Ochrana proti deleniu nulou
             if total_batches and total_batches > 0:
                 percent = (batch_idx / total_batches) * 100
                 print(
                     f"[TFT] Tréning - Epocha {epoch}/{max_epochs} | Dávka {batch_idx}/{total_batches} ({percent:.1f}%)")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="TFT model pre pipeline")
-    parser.add_argument("--train-dataset", required=True, help="Cesta k train.csv")
-    parser.add_argument("--val-dataset", required=True, help="Cesta k val.csv")
-    parser.add_argument("--test-dataset", required=True, help="Cesta k test.csv")
-    parser.add_argument("--target", required=True, help="Nazov cieloveho stlpca")
-    parser.add_argument("--date", required=True, help="Nazov stlpca s datumom")
-    parser.add_argument("--horizon", type=int, required=True, help="Pocet krokov predikcie")
-    parser.add_argument("--lookback-window", type=int, required=True, help="Dlzka vstupneho okna")
-    parser.add_argument("--seed", type=int, required=True, help="Seed pre reprodukovatelnost")
-    parser.add_argument("--output", required=True, help="Cesta k vystupnemu textovemu/json suboru")
-    args = parser.parse_args()
+# ---------------------------------------------------------------------------
+# Dátové funkcie (zhodné s N-BEATS pre férové porovnanie)
+# ---------------------------------------------------------------------------
+def load_data_to_timeseries(filepath, date_col, target_col):
+    """Načíta CSV a vytvorí TimeSeries pre target aj kovariáty."""
+    df = pd.read_csv(filepath)
+    df = df.drop_duplicates(subset=[date_col], keep='first')
 
-    print(f"[TFT] Načítavam dáta...")
-    try:
-        df_train = pd.read_csv(args.train_dataset)
-        df_val = pd.read_csv(args.val_dataset)
-        df_test = pd.read_csv(args.test_dataset)
+    # Automatické zistenie frekvencie
+    temp_dates = pd.DatetimeIndex(pd.to_datetime(df[date_col], utc=True))
+    zistena_frekvencia = pd.infer_freq(temp_dates[:10]) or 'D'
 
-        # Odstránenie duplicitných časov
-        df_train = df_train.drop_duplicates(subset=[args.date], keep='first')
-        df_val = df_val.drop_duplicates(subset=[args.date], keep='first')
-        df_test = df_test.drop_duplicates(subset=[args.date], keep='first')
+    # Kovariáty (všetky numerické okrem date a target)
+    covariate_cols = [
+        col for col in df.columns
+        if col not in [date_col, target_col] and pd.api.types.is_numeric_dtype(df[col])
+    ]
 
-    except Exception as e:
-        print(f"[ERROR] Zlyhalo načítanie CSV súborov: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Target series
+    target_series = TimeSeries.from_dataframe(
+        df, time_col=date_col, value_cols=target_col,
+        fill_missing_dates=True, freq=zistena_frekvencia
+    )
+    target_series = fill_missing_values(target_series, fill='auto')
 
-    try:
-        # Zistenie frekvencie
-        temp_dates = pd.DatetimeIndex(pd.to_datetime(df_train[args.date], utc=True))
-        zistena_frekvencia = pd.infer_freq(temp_dates[:10])
+    # Covariate series
+    cov_series = None
+    if covariate_cols:
+        cov_series = TimeSeries.from_dataframe(
+            df, time_col=date_col, value_cols=covariate_cols,
+            fill_missing_dates=True, freq=zistena_frekvencia
+        )
+        cov_series = fill_missing_values(cov_series, fill='auto')
 
-        if zistena_frekvencia is None:
-            print("[WARN] Nepodarilo sa zistiť frekvenciu automaticky. Použijem default 'D'.")
-            zistena_frekvencia = 'D'
-        else:
-            print(f"[TFT] Automaticky zistená frekvencia dát: {zistena_frekvencia}")
+    return target_series, cov_series
 
-        # Vytvorenie TimeSeries
-        series_train = TimeSeries.from_dataframe(df_train, time_col=args.date, value_cols=args.target,
-                                                 fill_missing_dates=True, freq=zistena_frekvencia)
-        series_val = TimeSeries.from_dataframe(df_val, time_col=args.date, value_cols=args.target,
-                                               fill_missing_dates=True, freq=zistena_frekvencia)
-        series_test = TimeSeries.from_dataframe(df_test, time_col=args.date, value_cols=args.target,
-                                                fill_missing_dates=True, freq=zistena_frekvencia)
 
-        series_train = fill_missing_values(series_train, fill='auto')
-        series_val = fill_missing_values(series_val, fill='auto')
-        series_test = fill_missing_values(series_test, fill='auto')
-    except Exception as e:
-        print(f"[ERROR] Problém s vytváraním TimeSeries: {e}", file=sys.stderr)
-        sys.exit(1)
+# ---------------------------------------------------------------------------
+# Mód: TRAIN
+# ---------------------------------------------------------------------------
+def mode_train(args):
+    pl.seed_everything(args.seed, workers=True)
 
-    # Spojenie histórie pre predikciu
-    train_val_series = series_train.append(series_val)
+    model_dir = Path(args.model_dir)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_path = model_dir / "tft_model.pt"
 
-    lookback = args.lookback_window
+    # --- ZMENA 1: Kontrola, či už je model kompletne dotrénovaný ---
+    if model_path.exists():
+        print(f"[TFT] Hotový model už existuje v '{model_path}'. Preskakujem trénovanie.")
+        return
+    # ---------------------------------------------------------------
 
-    if len(series_train) <= lookback + args.horizon:
-        print(f"[ERROR] Trénovací set je príliš krátky pre lookback {lookback}.", file=sys.stderr)
-        sys.exit(1)
+    print("[TFT] Načítavam dáta na trénovanie...")
+    train_target, train_cov = load_data_to_timeseries(args.train_dataset, args.date, args.target)
+    val_target, val_cov = load_data_to_timeseries(args.val_dataset, args.date, args.target)
 
-    print(f"[TFT] Trénujem model (Lookback: {lookback}, Horizon: {args.horizon}, Seed: {args.seed})...")
+    lookback = args.lookback_window if args.lookback_window else 4 * args.horizon
 
     # Pridanie Early Stoppingu
     my_stopper = EarlyStopping(
@@ -113,12 +112,12 @@ def main():
         mode='min',
     )
 
-    # Inštancia nášho vlastného progress callbacku
     my_progress = PipelineProgressCallback()
+    csv_logger = CSVLogger(save_dir=str(model_dir), name="logs")
 
     max_epochs = 100
 
-    # Model TFT s minimálnym preprocessingom
+    # Model TFT
     model = TFTModel(
         input_chunk_length=lookback,
         output_chunk_length=args.horizon,
@@ -130,47 +129,131 @@ def main():
         n_epochs=max_epochs,
         add_relative_index=True,
         random_state=args.seed,
+
+        # --- ZMENA 2: Parametre pre automatické načítanie checkpointov ---
+        model_name="tft_checkpoints",
+        work_dir=str(model_dir),
+        save_checkpoints=True,
+        force_reset=False,  # Zabezpečí, že ak existuje checkpoint, model z neho bude pokračovať
+        # -----------------------------------------------------------------
+
         pl_trainer_kwargs={
-            "accelerator": "cuda",
-            "devices": 1,
-            "enable_progress_bar": False,  # Štandardný progress bar necháme vypnutý
-            "logger": False,
-            "callbacks": [my_stopper, my_progress]  # Pridali sme my_progress
+            "accelerator": "auto",
+            "devices": 1 if torch.cuda.is_available() else "auto",
+            "enable_progress_bar": False,
+            "logger": csv_logger,
+            "callbacks": [my_stopper, my_progress]
         }
     )
 
-    # Trénujeme (podáme aj val_series pre sledovanie val_loss early stopperom)
-    model.fit(series_train, val_series=series_val, verbose=False)
+    fit_kwargs = {"series": train_target, "val_series": val_target, "verbose": False}
+    if train_cov is not None:
+        fit_kwargs["past_covariates"] = train_cov
+        fit_kwargs["val_past_covariates"] = val_cov
 
-    # Zistenie počtu epoch (kde sa to zastavilo)
-    ukoncena_epocha = max_epochs
+    print("[TFT] Spúšťam trénovanie...")
+    model.fit(**fit_kwargs)
+
+    # Uloženie finálneho modelu na disk
+    model.save(str(model_path))
+    print(f"[TFT] Model uložený do {model_path}")
+
+    # Uloženie metadát
+    stopped_epoch = max_epochs
     if hasattr(model, 'trainer') and model.trainer is not None:
-        ukoncena_epocha = model.trainer.current_epoch
-
-    # Ak zafungoval early stopping (zastavilo sa skôr)
+        stopped_epoch = model.trainer.current_epoch
     if my_stopper.stopped_epoch > 0:
-        ukoncena_epocha = my_stopper.stopped_epoch
+        stopped_epoch = my_stopper.stopped_epoch
 
-    print(f"[TFT] Vytváram predikciu...")
-    # Predikujeme z train_val histórie
-    prediction = model.predict(n=args.horizon, series=train_val_series)
+    with open(model_dir / "metadata.txt", "w", encoding="utf-8") as f:
+        f.write(f"epoch: {stopped_epoch}\n")
 
-    # Extrahujeme predikcie do listu pre JSON
-    pred_list = prediction.values().flatten().tolist()
 
-    # Zápis predikcií
-    print(f"[TFT] Zapisujem výsledky do {args.output}")
-    with open(args.output, "w", encoding="utf-8") as f:
-        json.dump(pred_list, f)
+# ---------------------------------------------------------------------------
+# Mód: PREDICT
+# ---------------------------------------------------------------------------
+def mode_predict(args):
+    pl.seed_everything(args.seed, workers=True)
 
-    # Zápis metadát (rovnaký priečinok ako args.output)
+    model_dir = Path(args.model_dir)
+    model_path = model_dir / "tft_model.pt"
+
+    if not model_path.exists():
+        print(f"[ERROR] Model nenajdeny: {model_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # -----------------------------------------------------------------------
+    # FIX PRE PYTORCH 2.6+
+    # -----------------------------------------------------------------------
+    import torch
+    original_load = torch.load
+
+    def patched_load(*a, **kw):
+        kw['weights_only'] = False
+        return original_load(*a, **kw)
+
+    torch.load = patched_load
+
+    try:
+        model = TFTModel.load(str(model_path))
+    finally:
+        torch.load = original_load
+    # -----------------------------------------------------------------------
+
+    # Načítanie histórie (context)
+    context_target, context_cov = load_data_to_timeseries(args.context_dataset, args.date, args.target)
+
+    predict_kwargs = {"n": args.horizon, "series": context_target}
+    if context_cov is not None:
+        predict_kwargs["past_covariates"] = context_cov
+
+    # Predikcia
+    print("[TFT] Vytváram predikciu...")
+    prediction = model.predict(**predict_kwargs)
+
+    # Formátovanie na rovnaký výstup ako má N-BEATS (CSV: timestamp, prediction)
+    timestamps = [ts.isoformat() for ts in prediction.time_index]
+    preds = prediction.values().flatten().tolist()
+
     output_path = Path(args.output)
-    metadata_path = output_path.parent / "tft_metadata.txt"
-    print(f"[TFT] Zapisujem metadáta do {metadata_path}")
-    with open(metadata_path, "w", encoding="utf-8") as f:
-        f.write(f"epoch: {ukoncena_epocha}\n")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"[TFT] Hotovo!")
+    pd.DataFrame({
+        "timestamp": timestamps,
+        "prediction": preds
+    }).to_csv(output_path, index=False)
+
+    print(f"[TFT] Predikcia uložená do {output_path}")
+
+
+# ---------------------------------------------------------------------------
+# Hlavný parser (zhodný s pipeline)
+# ---------------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(description="TFT model kompatibilný s pipeline")
+    parser.add_argument("--mode", choices=["train", "predict"], required=True)
+
+    parser.add_argument("--train-dataset", help="Cesta k train.csv")
+    parser.add_argument("--val-dataset", help="Cesta k val.csv")
+    parser.add_argument("--context-dataset", help="História pre predikciu")
+    parser.add_argument("--target", required=True, help="Nazov cieloveho stlpca")
+    parser.add_argument("--date", default="date", help="Nazov stlpca s datumom")
+    parser.add_argument("--horizon", type=int, required=True, help="Pocet krokov predikcie")
+    parser.add_argument("--lookback-window", type=int, default=None)
+    parser.add_argument("--output", help="Cesta k CSV vystupu (pre predict)")
+    parser.add_argument("--model-dir", required=True, help="Priecinok pre ulozenie/nacitanie modelu")
+    parser.add_argument("--seed", type=int, default=42)
+
+    args = parser.parse_args()
+
+    if args.mode == "train":
+        if not args.train_dataset or not args.val_dataset:
+            parser.error("--mode train vyžaduje --train-dataset a --val-dataset")
+        mode_train(args)
+    elif args.mode == "predict":
+        if not args.context_dataset or not args.output:
+            parser.error("--mode predict vyžaduje --context-dataset a --output")
+        mode_predict(args)
 
 
 if __name__ == "__main__":
