@@ -130,15 +130,21 @@ def compute_aggregate_metrics(df_windows: pd.DataFrame) -> tuple[dict, str]:
     """
     Computes aggregate metrics over averaged predictions per timestamp.
     For overlapping windows (stride < horizon) the same timestamp may appear
-    multiple times with different predictions — these are averaged before
-    computing metrics so each point in time contributes equally.
+    multiple times — predictions are averaged so each point contributes equally.
+
+    MSE, MAE, MAPE are computed over the full averaged series.
+    DA is computed per-window and then averaged, because it measures direction
+    within a window — computing it across window boundaries would be meaningless.
+
     Returns (metrics_dict, agg_mda_str).
     """
-    df_agg  = df_windows.groupby("timestamp", sort=True).agg(
+    # Average predictions per timestamp for point-wise metrics
+    df_agg = df_windows.groupby("timestamp", sort=True).agg(
         prediction=("prediction", "mean"),
-        actual=("actual",     "first"),  # actual is identical across windows
+        actual=("actual", "first"),  # actual is identical across windows
     ).reset_index()
 
+    # All metrics computed over the averaged series
     agg     = calculate_metrics(df_agg["actual"].tolist(), df_agg["prediction"].tolist())
     agg_mda = round(agg["da"], 2) if not np.isnan(agg["da"]) else "N/A"
     return agg, agg_mda
