@@ -1,0 +1,25 @@
+id,dataset,target,date,horizon,results_file,status,started_at
+1,Data/weather.csv,OT,date,96,Pipeline/outputs/1/results.csv,failed,2026-04-26 22:25:50
+2,Data/weather.csv,OT,date,192,Pipeline/outputs/2/results.csv,success,2026-04-27 00:28:06
+3,Data/ETTh1.csv,OT,date,96,Pipeline/outputs/3/results.csv,success,2026-04-27 03:26:16
+4,Data/ETTh1.csv,OT,date,192,Pipeline/outputs/4/results.csv,success,2026-04-27 04:00:19
+5,Data/ETTh2.csv,OT,date,96,Pipeline/outputs/5/results.csv,success,2026-04-27 04:34:53
+6,Data/ETTh2.csv,OT,date,192,Pipeline/outputs/6/results.csv,success,2026-04-27 05:13:37
+7,Data/electricity.csv,OT,date,96,Pipeline/outputs/7/results.csv,failed,2026-04-27 05:52:51
+8,Data/electricity.csv,OT,date,192,Pipeline/outputs/8/results.csv,failed,2026-04-27 09:16:31
+9,Data/weather.csv,OT,date,96,Pipeline/outputs/9/results.csv,success,2026-04-27 16:51:44
+10,Data/weather.csv,OT,date,192,Pipeline/outputs/10/results.csv,failed,2026-04-27 19:47:19
+11,Data/ETTh1.csv,OT,date,96,Pipeline/outputs/11/results.csv,success,2026-04-27 21:59:49
+12,Data/ETTh1.csv,OT,date,192,Pipeline/outputs/12/results.csv,success,2026-04-27 22:35:50
+13,Data/ETTh2.csv,OT,date,96,Pipeline/outputs/13/results.csv,success,2026-04-27 23:09:56
+14,Data/ETTh2.csv,OT,date,192,Pipeline/outputs/14/results.csv,success,2026-04-27 23:43:15
+15,Data/electricity.csv,OT,date,96,Pipeline/outputs/15/results.csv,failed,2026-04-28 00:25:45
+16,Data/electricity.csv,OT,date,192,Pipeline/outputs/16/results.csv,failed,2026-04-28 03:21:41
+17,Data/weather.csv,OT,date,96,Pipeline/outputs/17/results.csv,success,2026-04-28 07:51:14
+18,Data/weather.csv,OT,date,192,Pipeline/outputs/18/results.csv,success,2026-04-28 09:55:19
+19,Data/ETTh1.csv,OT,date,96,Pipeline/outputs/19/results.csv,success,2026-04-28 12:28:25
+20,Data/ETTh1.csv,OT,date,192,Pipeline/outputs/20/results.csv,success,2026-04-28 13:01:47
+21,Data/ETTh2.csv,OT,date,96,Pipeline/outputs/21/results.csv,success,2026-04-28 13:34:16
+22,Data/ETTh2.csv,OT,date,192,Pipeline/outputs/22/results.csv,success,2026-04-28 14:06:13
+23,Data/electricity.csv,OT,date,96,Pipeline/outputs/23/results.csv,failed,2026-04-28 14:43:40
+24,Data/electricity.csv,OT,date,192,Pipeline/outputs/24/results.csv,failed,2026-04-28 18:14:06

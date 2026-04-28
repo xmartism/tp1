@@ -39,6 +39,7 @@ Example:
 import argparse
 import os
 import random
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -62,18 +63,18 @@ MODELS = [
         "name": "deepAR",
         "script": "Models/DeepAR/deepAR.py",
     },
-    # {
-    #     "name": "nbeats",
-    #     "script": "Models/NBeats/NBeats.py",
-    # },
+    {
+        "name": "nbeats",
+        "script": "Models/NBeats/NBeats.py",
+    },
     {
         "name": "tsmixer",
         "script": "Models/Tsmixer/tsmixer.py",
     },
-    # {
-    #     "name": "tft",
-    #     "script": "Models/TFT/tft.py",
-    # },
+    {
+        "name": "tft",
+        "script": "Models/TFT/tft.py",
+    },
     {
         "name": "dlinear",
         "script": "Models/LTSF-Linear/run_longExp.py",
@@ -93,7 +94,7 @@ def split_and_scale_dataset(
     dataset_path: str,
     date_col: str,
     target_col: str,
-) -> tuple[Path, Path, Path, Path, StandardScaler, list, pd.DataFrame]:
+) -> tuple[Path, Path, Path, Path, Path, StandardScaler, list, pd.DataFrame]:
     """
     Loads the dataset, splits it chronologically (70/15/15) and scales all numeric columns.
     StandardScaler is fitted on training data only.
@@ -104,7 +105,7 @@ def split_and_scale_dataset(
         target_col   — name of the target column
 
     Vracia:
-        train_path, val_path, test_scaled_path, test_orig_path,
+        tmp_dir, train_path, val_path, test_scaled_path, test_orig_path,
         scaler, numeric_cols, test_df_original
     """
     path = Path(dataset_path)
@@ -167,7 +168,7 @@ def split_and_scale_dataset(
     print(f"[INFO] Test  (scaled) -> {test_path}")
     print(f"[INFO] Test  (orig)   -> {test_orig_path}")
 
-    return train_path, val_path, test_path, test_orig_path, scaler, numeric_cols, test_df_original
+    return tmp_dir, train_path, val_path, test_path, test_orig_path, scaler, numeric_cols, test_df_original
 
 
 # ---------------------------------------------------------------------------
@@ -258,15 +259,16 @@ def run_command(cmd: list[str], step_label: str) -> bool:
 
 def prepare_data(
     args,
-) -> tuple[Path, Path, Path, StandardScaler, int, pd.DataFrame, pd.DataFrame, int]:
+) -> tuple[Path, Path, Path, pd.DataFrame, StandardScaler, int, pd.DataFrame, pd.DataFrame, int]:
     """
     Splits and scales the dataset, builds full_df_scaled and computes test_start_abs.
 
     Returns:
-        train_path, val_path, full_df_scaled, scaler, target_idx,
+        data_tmp_dir, train_path, val_path, full_df_scaled, scaler, target_idx,
         test_df_scaled, test_df_original, test_start_abs
     """
     (
+        data_tmp_dir,
         train_path,
         val_path,
         test_scaled_path,
@@ -288,6 +290,7 @@ def prepare_data(
     test_start_abs = len(train_df_scaled) + len(val_df_scaled)
 
     return (
+        data_tmp_dir,
         train_path, val_path,
         full_df_scaled, scaler, target_idx,
         test_df_scaled, test_df_original, test_start_abs,
@@ -439,75 +442,87 @@ def run_pipeline(args) -> bool:
     print(f"[INFO] Seed={seed} | Horizon={args.horizon} | Lookback={lookback_window} | Stride={stride}")
 
     (
+        data_tmp_dir,
         train_path, val_path,
         full_df_scaled, scaler, target_idx,
         test_df_scaled, test_df_original, test_start_abs,
     ) = prepare_data(args)
 
-    windows = build_sliding_windows(
-        test_df=test_df_scaled,
-        date_col=args.date,
-        horizon=args.horizon,
-        stride=stride,
-    )
+    windows_tmp_dir = Path(tempfile.mkdtemp(prefix="pipeline_windows_"))
 
-    if not windows:
-        print("[ERROR] No sliding windows were generated. Check the test set length and horizon.")
-        sys.exit(1)
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    results_file = output_dir / "results.csv"
-    tmp_dir      = Path(tempfile.mkdtemp(prefix="pipeline_windows_"))
-
-    failed_models = []
-
-    for model in MODELS:
-        name      = model["name"]
-        script    = model["script"]
-        model_dir = output_dir / f"{name}_model"
-
-        print(f"\n\n{'#'*60}")
-        print(f"#  MODEL: {name.upper()}")
-        print(f"{'#'*60}")
-
-        train_time = train_model(
-            script, name, train_path, val_path,
-            model_dir, args, lookback_window, seed,
+    try:
+        windows = build_sliding_windows(
+            test_df=test_df_scaled,
+            date_col=args.date,
+            horizon=args.horizon,
+            stride=stride,
         )
-        if train_time is None:
-            failed_models.append(name)
-            continue
 
-        all_window_outputs = predict_windows(
-            script, name, model_dir,
-            windows, full_df_scaled,
-            test_start_abs, test_df_original,
-            scaler, target_idx, tmp_dir, args,
-            lookback_window, seed,
-        )
-        if all_window_outputs is None:
-            failed_models.append(name)
-            continue
+        if not windows:
+            print("[ERROR] No sliding windows were generated. Check the test set length and horizon.")
+            sys.exit(1)
 
-        agg_output_file = output_dir / f"{name}_windows.csv"
-        save_windows_csv(all_window_outputs, agg_output_file)
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        results_file = output_dir / "results.csv"
 
-        if not evaluate_model(name, agg_output_file, results_file, args, lookback_window, stride, seed, train_time):
-            print(f"[WARN] Evaluation failed for '{name}'.")
-            failed_models.append(name)
+        failed_models = []
 
-    total  = len(MODELS)
-    passed = total - len(failed_models)
+        for model in MODELS:
+            name      = model["name"]
+            script    = model["script"]
+            model_dir = output_dir / f"{name}_model"
 
-    print(f"\n\n{'='*60}")
-    print(f"  PIPELINE COMPLETE  —  {passed}/{total} models succeeded")
-    if failed_models:
-        print(f"  Failed models: {', '.join(failed_models)}")
-    print(f"  Results saved to: {results_file}")
-    print(f"{'='*60}\n")
+            print(f"\n\n{'#'*60}")
+            print(f"#  MODEL: {name.upper()}")
+            print(f"{'#'*60}")
 
-    return len(failed_models) == 0
+            train_time = train_model(
+                script, name, train_path, val_path,
+                model_dir, args, lookback_window, seed,
+            )
+            if train_time is None:
+                failed_models.append(name)
+                continue
+
+            all_window_outputs = predict_windows(
+                script, name, model_dir,
+                windows, full_df_scaled,
+                test_start_abs, test_df_original,
+                scaler, target_idx, windows_tmp_dir, args,
+                lookback_window, seed,
+            )
+            if all_window_outputs is None:
+                failed_models.append(name)
+                continue
+
+            agg_output_file = output_dir / f"{name}_windows.csv"
+            save_windows_csv(all_window_outputs, agg_output_file)
+
+            if not evaluate_model(name, agg_output_file, results_file, args, lookback_window, stride, seed, train_time):
+                print(f"[WARN] Evaluation failed for '{name}'.")
+                failed_models.append(name)
+
+        total  = len(MODELS)
+        passed = total - len(failed_models)
+
+        print(f"\n\n{'='*60}")
+        print(f"  PIPELINE COMPLETE  —  {passed}/{total} models succeeded")
+        if failed_models:
+            print(f"  Failed models: {', '.join(failed_models)}")
+        print(f"  Results saved to: {results_file}")
+        print(f"{'='*60}\n")
+
+        return len(failed_models) == 0
+
+    finally:
+        # Cleanup tmp dirs whether pipeline succeeded, failed, or crashed
+        for tmp in (data_tmp_dir, windows_tmp_dir):
+            try:
+                shutil.rmtree(tmp, ignore_errors=True)
+                print(f"[INFO] Cleaned up tmp dir: {tmp}")
+            except Exception as e:
+                print(f"[WARN] Could not remove tmp dir {tmp}: {e}")
 
 
 # ---------------------------------------------------------------------------

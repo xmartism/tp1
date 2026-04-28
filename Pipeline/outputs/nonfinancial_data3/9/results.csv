@@ -1,0 +1,6 @@
+Dataset,Target,Model,Horizon,Lookback window,Stride,Num Windows,Seed,Train Time (s),Epochs Trained,MSE,MAE,MAPE (%),MDA (%)
+weather.csv,OT,deepAR,96,96,24,326,1433444612,1217.02,46,796.7335,21.8924,4.8677,44.66
+weather.csv,OT,nbeats,96,96,24,326,1433444612,650.01,11,1116.8418,26.8365,6.039,46.46
+weather.csv,OT,tsmixer,96,96,24,326,1433444612,369.4,48,187.0498,10.9,2.4737,48.1
+weather.csv,OT,tft,96,96,24,326,1433444612,2074.63,8,301.5847,12.9596,2.8729,47.32
+weather.csv,OT,dlinear,96,96,24,326,1433444612,167.96,9,597.4575,19.7834,4.3848,50.68
