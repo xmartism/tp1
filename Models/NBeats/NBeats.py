@@ -96,14 +96,15 @@ def mode_train(args):
         num_stacks=30,
         layer_widths=512,
         n_epochs=50,
-        batch_size=1024,
+        batch_size=64,
         random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "auto",
             "devices": 1 if torch.cuda.is_available() else "auto",
             "enable_progress_bar": False,
             "logger": csv_logger,
-            "callbacks": [early_stopper]
+            "callbacks": [early_stopper],
+            "gradient_clip_val": 1.0
         }
     )
 
@@ -125,10 +126,6 @@ def mode_train(args):
     with open(model_dir / "metadata.txt", "w", encoding="utf-8") as f:
         f.write(f"epoch: {stopped_epoch}\n")
 
-
-# ---------------------------------------------------------------------------
-# Mód: PREDICT
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Mód: PREDICT
