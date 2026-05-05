@@ -87,13 +87,13 @@ chmod +x install.sh
 
 ## Modely
 
-| Model | Skript |
-|---|---|
-| TFT (Temporal Fusion Transformer) | `Models/TFT/tft.py` |
-| DeepAR | `Models/DeepAR/deepAR.py` |
-| N-BEATS | `Models/NBeats/NBeats.py` |
-| TSMixer | `Models/Tsmixer/tsmixer.py` |
-| LTSF-Linear (DLinear) | `Models/LTSF-Linear/run_longExp.py` |
+| Model | Paper | Skript |
+|---|---|---|
+| TFT (Temporal Fusion Transformer) | [Temporal Fusion Transformers for Interpretable Multi-horizon Time Series Forecasting (2019)](https://arxiv.org/abs/1912.09363) | `Models/TFT/tft.py` |
+| DeepAR | [DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks (2017)](https://arxiv.org/abs/1704.04110) | `Models/DeepAR/deepAR.py` |
+| N-BEATS | [N-BEATS: Neural basis expansion analysis for interpretable time series forecasting (2019)](https://arxiv.org/abs/1905.10437) | `Models/NBeats/NBeats.py` |
+| TSMixer | [TSMixer: An All-MLP Architecture for Time Series Forecasting (2023)](https://arxiv.org/abs/2303.06053) | `Models/Tsmixer/tsmixer.py` |
+| LTSF-Linear (DLinear) | [Are Transformers Effective for Time Series Forecasting? (2022)](https://arxiv.org/abs/2205.13504) | `Models/LTSF-Linear/run_longExp.py` |
 
 Každý model podporuje dva režimy:
 
@@ -282,6 +282,19 @@ Metriky pre každé sliding window zvlášť — rovnaké stĺpce ako `results.c
 
 ---
 
+## Datasety
+
+Experimenty boli vykonané na štyroch verejne dostupných datasetoch pre predikciu časových radov, prevzatých z repozitára [TSMixer](https://github.com/google-research/google-research/tree/master/tsmixer), ktorý odkazuje na predspracované dáta pochádzajúce z práce [Autoformer (2021)](https://arxiv.org/abs/2106.13008). Datasety sú dostupné na [Google Drive](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy).
+
+| Dataset | Počet premenných | Cieľová premenná | Počet bodov |
+|---|---|---|---|
+| ETTh1 | 7 | OT | 17 420 |
+| ETTh2 | 7 | OT | 17 420 |
+| Weather | 21 | OT | 52 696 |
+| Electricity | 321 | OT | 26 304 |
+
+---
+
 ## Metriky
 
 Všetky metriky sa počítajú oproti **pôvodným neškálovaným hodnotám** testovacej množiny, agregované cez všetky sliding windows.
@@ -296,4 +309,4 @@ $$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$$
 $$\text{MAPE} = \frac{100}{n} \sum_{i=1}^{n} \left| \frac{y_i - \hat{y}_i}{y_i} \right|$$
 
 **MDA (Mean Directional Accuracy)** — percento krokov kde predikcia správne odhadla smer zmeny (rast/pokles) voči predchádzajúcemu kroku. Porovnáva sa smer skutočných hodnôt so smerom predikcií. Pri horizonte 1 nie je definovaná (`N/A`):
-$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} \mathbf{1}\left[\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})\right]$$
+$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} \mathbf{1}\left(\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})\right)$$
