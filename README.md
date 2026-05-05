@@ -300,13 +300,17 @@ Experimenty boli vykonané na štyroch verejne dostupných datasetoch pre predik
 Všetky metriky sa počítajú oproti **pôvodným neškálovaným hodnotám** testovacej množiny, agregované cez všetky sliding windows.
 
 **MSE** — penalizuje väčšie odchýlky kvadraticky, citlivejšia na odľahlé hodnoty:
+
 $$\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
 
 **MAE** — priemerná veľkosť chyby v pôvodných jednotkách:
+
 $$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$$
 
 **MAPE** — chyba relatívne voči skutočným hodnotám. Chránená proti deleniu nulou: ak $y_i = 0$, použije sa $\varepsilon = 10^{-8}$ namiesto $y_i$:
+
 $$\text{MAPE} = \frac{100}{n} \sum_{i=1}^{n} \left| \frac{y_i - \hat{y}_i}{y_i} \right|$$
 
 **MDA (Mean Directional Accuracy)** — percento krokov kde predikcia správne odhadla smer zmeny (rast/pokles) voči predchádzajúcemu kroku. Porovnáva sa smer skutočných hodnôt so smerom predikcií. Pri horizonte 1 nie je definovaná (`N/A`):
-$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} \mathbf{1}\left(\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})\right)$$
+
+$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} [\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})]$$
