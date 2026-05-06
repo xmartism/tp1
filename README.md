@@ -49,39 +49,52 @@ Automatizovaný rámec na trénovanie, predikciu a vyhodnotenie časových radov
 │               ├── metadata.txt
 │               └── ...          (natrénovaný model)
 ├── requirements.txt
-└── install.sh
+├── install.sh
+└── install.ps1
 ```
 
 ---
 
 ## Inštalácia
 
-Závislosti sú rozdelené do dvoch súborov: `requirements.txt` a `install.sh`.
+Priamy príkaz `pip install -r requirements.txt` nefunguje pre všetky balíky kvôli konfliktom závislostí (najmä `darts` a `tensorflow`), preto je potrebné použiť inštalačný skript.
 
-Priamy príkaz `pip install -r requirements.txt` nefunguje pre všetky balíky kvôli konfliktom závislostí (najmä `darts` a `tensorflow`), preto je potrebné použiť skript `install.sh`.
+### Linux / macOS
 
-### Postup
+Testované na Pythone 3.10.
+
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-### Čo install.sh robí
+### Windows
 
-1. **Nainštaluje závislosti** z `requirements.txt` — základné knižnice s pevne stanovenými verziami kompatibilnými medzi sebou.
+Testované na Pythone 3.10. 
 
-2. **Nainštaluje darts==0.42.1 bez kontroly závislostí** — `darts` vyžaduje `numpy>=2.2.0`, čo je v konflikte s ostatnými knižnicami. Kombinácia `darts==0.42.1` a `numpy==1.26.4` však funguje správne v praxi, preto sa inštaluje s príznakom `--no-deps`.
+```powershell
+py -3.10 -m venv .venv
+.venv\Scripts\Activate.ps1
+Set-ExecutionPolicy -Scope Process Bypass
+./install.ps1
+```
 
-3. **Nainštaluje tensorflow==2.12.0 bez kontroly závislostí** — `tensorflow==2.12.0` vyžaduje `numpy<1.24`, čo je tiež v konflikte. Rovnako sa inštaluje s `--no-deps`.
+> **Poznámka:** Na Windows nie je dostupné `mxnet==1.9.1` (posledná verzia s Windows wheelpom je `1.7.0.post2`) ani `tensorflow-io-gcs-filesystem==0.37.1`. Skript `install.ps1` tieto rozdiely rieši automaticky — nainštaluje kompatibilné verzie a aplikuje rovnaké opravy.
 
-4. **Opraví kompatibilitu mxnet 1.9.1 s numpy 1.26.4** — `mxnet 1.9.1` používa `np.bool`, ktoré bolo odstránené v NumPy 1.24. Skript automaticky opraví súbor `mxnet/numpy/utils.py`:
+### Čo inštalačné skripty robia
+
+1. **Nainštalujú závislosti** z `requirements.txt` — základné knižnice s pevne stanovenými verziami kompatibilnými medzi sebou.
+
+2. **Nainštalujú darts==0.42.1 bez kontroly závislostí** — `darts` vyžaduje `numpy>=2.2.0`, čo je v konflikte s ostatnými knižnicami. Kombinácia `darts==0.42.1` a `numpy==1.26.4` však funguje správne v praxi, preto sa inštaluje s príznakom `--no-deps`.
+
+3. **Nainštalujú tensorflow==2.12.0 bez kontroly závislostí** — `tensorflow==2.12.0` vyžaduje `numpy<1.24`, čo je tiež v konflikte. Rovnako sa inštaluje s `--no-deps`.
+
+4. **Opravia kompatibilitu mxnet s numpy 1.26.4** — `mxnet` používa `np.bool`, ktoré bolo odstránené v NumPy 1.24. Skript automaticky opraví súbor `mxnet/numpy/utils.py`:
    - Nahradí `onp.bool` za `bool`
    - Opraví `bool_`, ktorý sa pokazil v predchádzajúcom kroku
    - Opraví `np` na správny alias `onp`
 
-   Cesta k súboru sa zistí dynamicky, takže oprava funguje aj v prostredí virtuálneho prostredia (venv) aj bez neho.
-
-5. **Overí inštaláciu mxnet** príkazom `python3 -c "import mxnet; print('mxnet ok')"`.
+5. **Overí inštaláciu mxnet** príkazom `import mxnet`.
 
 ---
 

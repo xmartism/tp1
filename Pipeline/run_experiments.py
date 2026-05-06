@@ -26,7 +26,6 @@ EXPERIMENTS = [
         "target":   "OT",
         "date":     "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride":   24,
     },
     {
@@ -34,7 +33,6 @@ EXPERIMENTS = [
         "target":   "OT",
         "date":     "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -42,7 +40,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -50,7 +47,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -58,7 +54,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -66,7 +61,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -74,7 +68,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -82,7 +75,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -90,7 +82,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -98,7 +89,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -106,7 +96,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
     {
@@ -114,7 +103,6 @@ EXPERIMENTS = [
         "target": "OT",
         "date": "date",
         "horizons": [96, 192],
-        "lookback-window": 96,
         "stride": 24,
     },
 ]
