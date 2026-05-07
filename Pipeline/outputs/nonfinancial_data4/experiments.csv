@@ -1,0 +1,19 @@
+id,dataset,target,date,horizon,results_file,status,started_at
+1,Data/ETTm1.csv,OT,date,96,Pipeline/outputs/1/results.csv,success,2026-05-02 10:37:39
+2,Data/ETTm1.csv,OT,date,192,Pipeline/outputs/2/results.csv,success,2026-05-02 13:20:58
+3,Data/ETTm2.csv,OT,date,96,Pipeline/outputs/3/results.csv,success,2026-05-02 15:59:54
+4,Data/ETTm2.csv,OT,date,192,Pipeline/outputs/4/results.csv,success,2026-05-02 18:43:45
+5,Data/traffic.csv,OT,date,96,Pipeline/outputs/5/results.csv,failed,2026-05-02 21:32:35
+6,Data/traffic.csv,OT,date,192,Pipeline/outputs/6/results.csv,failed,2026-05-03 04:39:07
+7,Data/ETTm1.csv,OT,date,96,Pipeline/outputs/7/results.csv,success,2026-05-03 15:23:10
+8,Data/ETTm1.csv,OT,date,192,Pipeline/outputs/8/results.csv,success,2026-05-03 18:02:28
+9,Data/ETTm2.csv,OT,date,96,Pipeline/outputs/9/results.csv,success,2026-05-03 20:29:45
+10,Data/ETTm2.csv,OT,date,192,Pipeline/outputs/10/results.csv,success,2026-05-03 23:07:27
+11,Data/traffic.csv,OT,date,96,Pipeline/outputs/11/results.csv,failed,2026-05-04 03:12:13
+12,Data/traffic.csv,OT,date,192,Pipeline/outputs/12/results.csv,failed,2026-05-04 11:17:35
+13,Data/ETTm1.csv,OT,date,96,Pipeline/outputs/13/results.csv,success,2026-05-05 04:06:22
+14,Data/ETTm1.csv,OT,date,192,Pipeline/outputs/14/results.csv,success,2026-05-05 06:55:26
+15,Data/ETTm2.csv,OT,date,96,Pipeline/outputs/15/results.csv,success,2026-05-05 09:45:48
+16,Data/ETTm2.csv,OT,date,192,Pipeline/outputs/16/results.csv,success,2026-05-05 12:39:03
+17,Data/traffic.csv,OT,date,96,Pipeline/outputs/17/results.csv,failed,2026-05-05 15:52:25
+18,Data/traffic.csv,OT,date,192,Pipeline/outputs/18/results.csv,failed,2026-05-05 23:41:32
