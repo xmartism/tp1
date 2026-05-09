@@ -49,51 +49,64 @@ Automatizovaný rámec na trénovanie, predikciu a vyhodnotenie časových radov
 │               ├── metadata.txt
 │               └── ...          (natrénovaný model)
 ├── requirements.txt
-└── install.sh
+├── install.sh
+└── install.ps1
 ```
 
 ---
 
 ## Inštalácia
 
-Závislosti sú rozdelené do dvoch súborov: `requirements.txt` a `install.sh`.
+Priamy príkaz `pip install -r requirements.txt` nefunguje pre všetky balíky kvôli konfliktom závislostí (najmä `darts` a `tensorflow`), preto je potrebné použiť inštalačný skript.
 
-Priamy príkaz `pip install -r requirements.txt` nefunguje pre všetky balíky kvôli konfliktom závislostí (najmä `darts` a `tensorflow`), preto je potrebné použiť skript `install.sh`.
+### Linux / macOS
 
-### Postup
+Testované na Pythone 3.10.
+
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-### Čo install.sh robí
+### Windows
 
-1. **Nainštaluje závislosti** z `requirements.txt` — základné knižnice s pevne stanovenými verziami kompatibilnými medzi sebou.
+Testované na Pythone 3.10. 
 
-2. **Nainštaluje darts==0.42.1 bez kontroly závislostí** — `darts` vyžaduje `numpy>=2.2.0`, čo je v konflikte s ostatnými knižnicami. Kombinácia `darts==0.42.1` a `numpy==1.26.4` však funguje správne v praxi, preto sa inštaluje s príznakom `--no-deps`.
+```powershell
+py -3.10 -m venv .venv
+.venv\Scripts\Activate.ps1
+Set-ExecutionPolicy -Scope Process Bypass
+./install.ps1
+```
 
-3. **Nainštaluje tensorflow==2.12.0 bez kontroly závislostí** — `tensorflow==2.12.0` vyžaduje `numpy<1.24`, čo je tiež v konflikte. Rovnako sa inštaluje s `--no-deps`.
+> **Poznámka:** Na Windows nie je dostupné `mxnet==1.9.1` (posledná verzia s Windows wheelpom je `1.7.0.post2`) ani `tensorflow-io-gcs-filesystem==0.37.1`. Skript `install.ps1` tieto rozdiely rieši automaticky — nainštaluje kompatibilné verzie a aplikuje rovnaké opravy.
 
-4. **Opraví kompatibilitu mxnet 1.9.1 s numpy 1.26.4** — `mxnet 1.9.1` používa `np.bool`, ktoré bolo odstránené v NumPy 1.24. Skript automaticky opraví súbor `mxnet/numpy/utils.py`:
+### Čo inštalačné skripty robia
+
+1. **Nainštalujú závislosti** z `requirements.txt` — základné knižnice s pevne stanovenými verziami kompatibilnými medzi sebou.
+
+2. **Nainštalujú darts==0.42.1 bez kontroly závislostí** — `darts` vyžaduje `numpy>=2.2.0`, čo je v konflikte s ostatnými knižnicami. Kombinácia `darts==0.42.1` a `numpy==1.26.4` však funguje správne v praxi, preto sa inštaluje s príznakom `--no-deps`.
+
+3. **Nainštalujú tensorflow==2.12.0 bez kontroly závislostí** — `tensorflow==2.12.0` vyžaduje `numpy<1.24`, čo je tiež v konflikte. Rovnako sa inštaluje s `--no-deps`.
+
+4. **Opravia kompatibilitu mxnet s numpy 1.26.4** — `mxnet` používa `np.bool`, ktoré bolo odstránené v NumPy 1.24. Skript automaticky opraví súbor `mxnet/numpy/utils.py`:
    - Nahradí `onp.bool` za `bool`
    - Opraví `bool_`, ktorý sa pokazil v predchádzajúcom kroku
    - Opraví `np` na správny alias `onp`
 
-   Cesta k súboru sa zistí dynamicky, takže oprava funguje aj v prostredí virtuálneho prostredia (venv) aj bez neho.
-
-5. **Overí inštaláciu mxnet** príkazom `python3 -c "import mxnet; print('mxnet ok')"`.
+5. **Overí inštaláciu mxnet** príkazom `import mxnet`.
 
 ---
 
 ## Modely
 
-| Model | Skript |
-|---|---|
-| TFT (Temporal Fusion Transformer) | `Models/TFT/tft.py` |
-| DeepAR | `Models/DeepAR/deepAR.py` |
-| N-BEATS | `Models/NBeats/NBeats.py` |
-| TSMixer | `Models/Tsmixer/tsmixer.py` |
-| LTSF-Linear (DLinear) | `Models/LTSF-Linear/run_longExp.py` |
+| Model | Paper | Skript |
+|---|---|---|
+| TFT (Temporal Fusion Transformer) | [Temporal Fusion Transformers for Interpretable Multi-horizon Time Series Forecasting (2019)](https://arxiv.org/abs/1912.09363) | `Models/TFT/tft.py` |
+| DeepAR | [DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks (2017)](https://arxiv.org/abs/1704.04110) | `Models/DeepAR/deepAR.py` |
+| N-BEATS | [N-BEATS: Neural basis expansion analysis for interpretable time series forecasting (2019)](https://arxiv.org/abs/1905.10437) | `Models/NBeats/NBeats.py` |
+| TSMixer | [TSMixer: An All-MLP Architecture for Time Series Forecasting (2023)](https://arxiv.org/abs/2303.06053) | `Models/Tsmixer/tsmixer.py` |
+| LTSF-Linear (DLinear) | [Are Transformers Effective for Time Series Forecasting? (2022)](https://arxiv.org/abs/2205.13504) | `Models/LTSF-Linear/run_longExp.py` |
 
 Každý model podporuje dva režimy:
 
@@ -282,18 +295,35 @@ Metriky pre každé sliding window zvlášť — rovnaké stĺpce ako `results.c
 
 ---
 
+## Datasety
+
+Experimenty boli vykonané na štyroch verejne dostupných datasetoch pre predikciu časových radov, prevzatých z repozitára [TSMixer](https://github.com/google-research/google-research/tree/master/tsmixer), ktorý odkazuje na predspracované dáta pochádzajúce z práce [Autoformer (2021)](https://arxiv.org/abs/2106.13008). Datasety sú dostupné na [Google Drive](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy).
+
+| Dataset | Počet premenných | Cieľová premenná | Počet bodov |
+|---|---|---|---|
+| ETTh1 | 7 | OT | 17 420 |
+| ETTh2 | 7 | OT | 17 420 |
+| Weather | 21 | OT | 52 696 |
+| Electricity | 321 | OT | 26 304 |
+
+---
+
 ## Metriky
 
 Všetky metriky sa počítajú oproti **pôvodným neškálovaným hodnotám** testovacej množiny, agregované cez všetky sliding windows.
 
 **MSE** — penalizuje väčšie odchýlky kvadraticky, citlivejšia na odľahlé hodnoty:
+
 $$\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
 
 **MAE** — priemerná veľkosť chyby v pôvodných jednotkách:
+
 $$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$$
 
 **MAPE** — chyba relatívne voči skutočným hodnotám. Chránená proti deleniu nulou: ak $y_i = 0$, použije sa $\varepsilon = 10^{-8}$ namiesto $y_i$:
+
 $$\text{MAPE} = \frac{100}{n} \sum_{i=1}^{n} \left| \frac{y_i - \hat{y}_i}{y_i} \right|$$
 
 **MDA (Mean Directional Accuracy)** — percento krokov kde predikcia správne odhadla smer zmeny (rast/pokles) voči predchádzajúcemu kroku. Porovnáva sa smer skutočných hodnôt so smerom predikcií. Pri horizonte 1 nie je definovaná (`N/A`):
-$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} \mathbf{1}\left[\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})\right]$$
+
+$$\text{MDA} = \frac{100}{n-1} \sum_{i=2}^{n} [\text{sign}(y_i - y_{i-1}) = \text{sign}(\hat{y}_i - \hat{y}_{i-1})]$$

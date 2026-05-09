@@ -1,0 +1,5 @@
+Dataset,Target,Model,Horizon,Lookback window,Stride,Num Windows,Seed,Train Time (s),Epochs Trained,MSE,MAE,MAPE (%),MDA (%)
+traffic.csv,OT,deepAR,96,96,24,106,880565798,257.96,16,0.0002,0.0112,53086.0797,86.35
+traffic.csv,OT,tsmixer,96,96,24,106,880565798,568.03,30,0.0001,0.0051,22206.6134,86.16
+traffic.csv,OT,tft,96,96,24,106,880565798,21886.53,20,0.0001,0.0073,15716.9522,82.26
+traffic.csv,OT,dlinear,96,96,24,106,880565798,1163.68,18,0.0001,0.0063,2992.5597,86.27
