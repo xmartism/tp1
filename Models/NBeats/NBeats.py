@@ -80,8 +80,8 @@ def mode_train(args):
 
     early_stopper = EarlyStopping(
         monitor="val_loss",
-        patience=10,
-        min_delta=1e-4,
+        patience=5,
+        min_delta=1e-3,
         mode="min",
     )
 
@@ -96,7 +96,7 @@ def mode_train(args):
         num_stacks=30,
         layer_widths=512,
         n_epochs=50,
-        batch_size=64,
+        batch_size=1024,
         random_state=args.seed,
         pl_trainer_kwargs={
             "accelerator": "auto",
