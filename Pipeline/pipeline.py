@@ -436,7 +436,7 @@ def run_pipeline(args) -> bool:
     Returns True if all models succeeded.
     """
     seed            = args.seed if args.seed is not None else random.randint(0, 2**31 - 1)
-    lookback_window = args.lookback_window if args.lookback_window is not None else 4 * args.horizon
+    lookback_window = args.lookback_window if args.lookback_window is not None else 3 * args.horizon
     stride          = args.stride if args.stride is not None else args.horizon
 
     print(f"[INFO] Seed={seed} | Horizon={args.horizon} | Lookback={lookback_window} | Stride={stride}")

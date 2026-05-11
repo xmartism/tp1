@@ -20,7 +20,7 @@ import time
 # Always run relative to the project root (one level above this script)
 os.chdir(Path(__file__).resolve().parent.parent)
 
-EXPERIMENTS = [
+'''EXPERIMENTS = [
     {
         "dataset":  "Data/ETTm1.csv",
         "target":   "OT",
@@ -84,9 +84,47 @@ EXPERIMENTS = [
         "horizons": [96, 192],
         "stride": 24,
     }
+]'''
+
+EXPERIMENTS = [
+    {
+        "dataset":  "Data/financialdata/AAPL.csv",
+        "target":   "Close",
+        "date":     "Date",
+        "horizons": [32, 48],
+        "stride":   24,
+    },
+    {
+        "dataset":  "Data/financialdata/JPM.csv",
+        "target":   "Close",
+        "date":     "Date",
+        "horizons": [32, 48],
+        "stride":   24,
+    },
+    {
+        "dataset":  "Data/financialdata/KO.csv",
+        "target":   "Close",
+        "date":     "Date",
+        "horizons": [32, 48],
+        "stride":   24,
+    },
+    {
+        "dataset":  "Data/financialdata/SPY.csv",
+        "target":   "Close",
+        "date":     "Date",
+        "horizons": [32, 48],
+        "stride":   24,
+    },
+    {
+        "dataset":  "Data/financialdata/TSLA.csv",
+        "target":   "Close",
+        "date":     "Date",
+        "horizons": [32, 48],
+        "stride":   24,
+    },
 ]
 
-OUTPUTS_ROOT     = Path("Pipeline/outputs")
+OUTPUTS_ROOT     = Path("Pipeline/outputs/financial")
 EXPERIMENTS_FILE = OUTPUTS_ROOT / "experiments.csv"
 EXPERIMENTS_COLS = ["id", "dataset", "target", "date", "horizon", "results_file", "status", "started_at"]
 
