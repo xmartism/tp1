@@ -297,6 +297,8 @@ Metriky pre každé sliding window zvlášť — rovnaké stĺpce ako `results.c
 
 ## Datasety
 
+### Nefinančné datasety
+
 Experimenty boli vykonané na štyroch verejne dostupných datasetoch pre predikciu časových radov, prevzatých z repozitára [TSMixer](https://github.com/google-research/google-research/tree/master/tsmixer), ktorý odkazuje na predspracované dáta pochádzajúce z práce [Autoformer (2021)](https://arxiv.org/abs/2106.13008). Datasety sú dostupné na [Google Drive](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy).
 
 | Dataset | Počet premenných | Cieľová premenná | Počet bodov |
@@ -305,6 +307,18 @@ Experimenty boli vykonané na štyroch verejne dostupných datasetoch pre predik
 | ETTh2 | 7 | OT | 17 420 |
 | Weather | 21 | OT | 52 696 |
 | Electricity | 321 | OT | 26 304 |
+
+### Finančné datasety
+
+Finančné časové rady akciových titulov sú dostupné na [Google Drive](https://drive.google.com/drive/folders/1lij_2jzR5flnJ1l-D50kq007oOYqqKd2?usp=sharing). Datasety obsahujú stĺpce `Date`, `Open`, `High`, `Low`, `Close`, `Volume` a sú plne upravené (dividendy, splitty, korporátne akcie). Granularita: 1D (obchodné dni), obdobie: 2015-01-02 – 2025-12-31.
+
+| Dataset | Sektor | Počet premenných | Cieľová premenná | Počet bodov |
+|---|---|---|---|---|
+| AAPL | Information Technology | 6 | Close | 2 766 |
+| KO | Consumer Staples | 6 | Close | 2 766 |
+| TSLA | Consumer Discretionary | 6 | Close | 2 766 |
+| JPM | Financials | 6 | Close | 2 766 |
+| SPY | All sectors | 6 | Close | 2 766 |
 
 ---
 

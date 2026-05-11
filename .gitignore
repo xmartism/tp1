@@ -1,2 +1,4 @@
 .idea/
 .vbev/
+Data/financialdata/*
+**/__pycache__/

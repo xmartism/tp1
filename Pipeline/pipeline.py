@@ -26,7 +26,7 @@ Parameters:
 
 Example:
   python3 Pipeline/pipeline.py \
-      --dataset Data/weatherHistory.csv \
+      --dataset Data/nonfinancialdata/weatherHistory.csv \
       --target "Temperature (C)" \
       --date "Formatted Date" \
       --horizon 24 \
@@ -315,6 +315,7 @@ def train_model(
         "--lookback-window", str(lookback_window),
         "--model-dir",       str(model_dir),
         "--seed",            str(seed),
+        *(["--freq",         str(args.freq)] if args.freq is not None else []),
     ]
     start_time = time.time()
     success    = run_command(train_cmd, f"[{name}] Training")
@@ -365,6 +366,7 @@ def predict_windows(
             "--model-dir",       str(model_dir),
             "--output",          str(win_output_file),
             "--seed",            str(seed),
+            *(["--freq",         str(args.freq)] if args.freq is not None else []),
         ]
 
         if not run_command(predict_cmd, f"[{name}] Predict window {win_idx}"):
@@ -541,6 +543,8 @@ def main():
                         help="Context window length (default: 4 * horizon)")
     parser.add_argument("--stride",           type=int, default=None,
                         help="Sliding window step size (default: horizon → non-overlapping)")
+    parser.add_argument("--freq",             default=None,
+                        help="Pandas frequency string (e.g. 'B', 'h', 'D'). If omitted, inferred from data.")
     parser.add_argument("--seed",             type=int, default=None)
     parser.add_argument("--output-dir",       default="Pipeline/outputs")
 

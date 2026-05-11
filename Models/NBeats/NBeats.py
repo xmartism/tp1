@@ -31,14 +31,14 @@ torch.set_float32_matmul_precision('medium')
 # Dátové funkcie
 # ---------------------------------------------------------------------------
 
-def load_data_to_timeseries(filepath, date_col, target_col):
+def load_data_to_timeseries(filepath, date_col, target_col, freq=None):
     """Načíta CSV a vytvorí TimeSeries pre target aj kovariáty."""
     df = pd.read_csv(filepath)
     df = df.drop_duplicates(subset=[date_col], keep='first')
 
     # Automatické zistenie frekvencie
     temp_dates = pd.DatetimeIndex(pd.to_datetime(df[date_col], utc=True))
-    zistena_frekvencia = pd.infer_freq(temp_dates[:10]) or 'D'
+    zistena_frekvencia = freq or pd.infer_freq(temp_dates[:10]) or 'D'
 
     # Kovariáty
     covariate_cols = [
@@ -73,8 +73,8 @@ def mode_train(args):
     pl.seed_everything(args.seed, workers=True)
 
     print("[N-BEATS] Načítavam dáta na trénovanie...")
-    train_target, train_cov = load_data_to_timeseries(args.train_dataset, args.date, args.target)
-    val_target, val_cov = load_data_to_timeseries(args.val_dataset, args.date, args.target)
+    train_target, train_cov = load_data_to_timeseries(args.train_dataset, args.date, args.target, args.freq)
+    val_target, val_cov = load_data_to_timeseries(args.val_dataset, args.date, args.target, args.freq)
 
     lookback = args.lookback_window if args.lookback_window else 4 * args.horizon
 
@@ -164,7 +164,7 @@ def mode_predict(args):
     # -----------------------------------------------------------------------
 
     # Načítanie histórie (context)
-    context_target, context_cov = load_data_to_timeseries(args.context_dataset, args.date, args.target)
+    context_target, context_cov = load_data_to_timeseries(args.context_dataset, args.date, args.target, args.freq)
 
     predict_kwargs = {"n": args.horizon, "series": context_target}
     if context_cov is not None:
@@ -203,6 +203,8 @@ def main():
     parser.add_argument("--date", default="date", help="Názov stĺpca s dátumom")
     parser.add_argument("--horizon", type=int, required=True, help="Počet krokov predikcie")
     parser.add_argument("--lookback-window", type=int, default=None)
+    parser.add_argument("--freq", default=None,
+                        help="Frekvencia dát (napr. 'B', 'h', 'D'). Ak je vynechané, odvodí sa z dát.")
     parser.add_argument("--output", help="Cesta k CSV výstupu (pre predict)")
     parser.add_argument("--model-dir", required=True, help="Priečinok pre uloženie/načítanie modelu")
     parser.add_argument("--seed", type=int, default=42)
