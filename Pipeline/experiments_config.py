@@ -91,7 +91,7 @@ EXPERIMENTS_FINANCIAL = [
         "freq": "B",
     },
     {
-        "dataset": "Data/AAPL.csv",
+        "dataset": "Data/financialdata/AAPL.csv",
         "target": "Close",
         "date": "Date",
         "horizons": [32, 48],
@@ -131,7 +131,7 @@ EXPERIMENTS_FINANCIAL = [
         "freq": "B",
     },
     {
-        "dataset": "Data/AAPL.csv",
+        "dataset": "Data/financialdata/AAPL.csv",
         "target": "Close",
         "date": "Date",
         "horizons": [32, 48],
