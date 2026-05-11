@@ -75,8 +75,10 @@ def fill_missing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def infer_freq(df: pd.DataFrame) -> str:
+def infer_freq(df: pd.DataFrame, freq_override: str = None) -> str:
     """Return a pandas offset string for the DataFrame's DatetimeIndex."""
+    if freq_override:
+        return freq_override
     freq = pd.infer_freq(df.index)
     if freq is None:
         return "h"
@@ -159,6 +161,8 @@ def parse_args():
     # Optional hyperparameter overrides
     parser.add_argument("--dataset-name", default=None,
                         help="Dataset name for hyperparameter preset (e.g. 'weather')")
+    parser.add_argument("--freq", default=None,
+                        help="Pandas frequency string (e.g. 'B', 'h', 'D'). If omitted, inferred from data.")
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--train-epochs", type=int, default=100)
     parser.add_argument("--patience", type=int, default=5)
@@ -350,7 +354,7 @@ def mode_predict(args):
             "Padding with zeros at the front.",
             file=sys.stderr,
         )
-        freq_str = infer_freq(input_df)
+        freq_str = infer_freq(input_df, args.freq)
         pad_end = input_df.index[0] - pd.tseries.frequencies.to_offset(freq_str)
         pad_idx = pd.date_range(end=pad_end, periods=lookback - len(input_df), freq=freq_str)
         pad = pd.DataFrame(
@@ -369,7 +373,7 @@ def mode_predict(args):
     # --- Generate future timestamps ---
     last_ts = input_df.index[-1] if isinstance(input_df.index, pd.DatetimeIndex) else None
     if last_ts is not None:
-        freq_str = infer_freq(input_df) if isinstance(input_df.index, pd.DatetimeIndex) else "h"
+        freq_str = infer_freq(input_df, args.freq) if isinstance(input_df.index, pd.DatetimeIndex) else "h"
         offset = pd.tseries.frequencies.to_offset(freq_str)
         timestamps = [
             (last_ts + offset * (i + 1)).isoformat()

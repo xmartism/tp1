@@ -20,111 +20,13 @@ import time
 # Always run relative to the project root (one level above this script)
 os.chdir(Path(__file__).resolve().parent.parent)
 
-'''EXPERIMENTS = [
-    {
-        "dataset":  "Data/ETTm1.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/ETTm2.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    },
-    {
-        "dataset":  "Data/traffic.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    },
-    {
-        "dataset":  "Data/ETTm1.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/ETTm2.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    },
-    {
-        "dataset":  "Data/traffic.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    },
-{
-        "dataset":  "Data/ETTm1.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/ETTm2.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    },
-    {
-        "dataset":  "Data/traffic.csv",
-        "target":   "OT",
-        "date":     "date",
-        "horizons": [96, 192],
-        "stride": 24,
-    }
-]'''
+from experiments_config import EXPERIMENTS_NONFINANCIAL, EXPERIMENTS_FINANCIAL
 
-EXPERIMENTS = [
-    {
-        "dataset":  "Data/financialdata/AAPL.csv",
-        "target":   "Close",
-        "date":     "Date",
-        "horizons": [32, 48],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/financialdata/JPM.csv",
-        "target":   "Close",
-        "date":     "Date",
-        "horizons": [32, 48],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/financialdata/KO.csv",
-        "target":   "Close",
-        "date":     "Date",
-        "horizons": [32, 48],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/financialdata/SPY.csv",
-        "target":   "Close",
-        "date":     "Date",
-        "horizons": [32, 48],
-        "stride":   24,
-    },
-    {
-        "dataset":  "Data/financialdata/TSLA.csv",
-        "target":   "Close",
-        "date":     "Date",
-        "horizons": [32, 48],
-        "stride":   24,
-    },
-]
+USE_FINANCIAL = True
 
-OUTPUTS_ROOT     = Path("Pipeline/outputs/financial")
+EXPERIMENTS = EXPERIMENTS_FINANCIAL if USE_FINANCIAL else EXPERIMENTS_NONFINANCIAL
+
+OUTPUTS_ROOT     = Path("Pipeline/outputs/financial") if USE_FINANCIAL else Path("Pipeline/outputs/nonfinancial")
 EXPERIMENTS_FILE = OUTPUTS_ROOT / "experiments.csv"
 EXPERIMENTS_COLS = ["id", "dataset", "target", "date", "horizon", "results_file", "status", "started_at"]
 

@@ -47,6 +47,9 @@ from gluonts.mx.trainer.callback import Callback
 from gluonts.mx.distribution import GaussianOutput
 from gluonts.model.predictor import Predictor
 
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="gluonts")
+
 
 # ---------------------------------------------------------------------------
 # Early Stopping
@@ -124,8 +127,10 @@ def load_csv_dataset(filepath, date_col, target_col):
     return df
 
 
-def infer_freq(df):
+def infer_freq(df, freq_override=None):
     """Infer pandas frequency string from the DatetimeIndex, normalising deprecated aliases."""
+    if freq_override:
+        return freq_override
     freq = pd.infer_freq(df.index)
     if freq is None:
         return "h"
@@ -168,7 +173,7 @@ def mode_train(args):
     train_df = load_csv_dataset(args.train_dataset, args.date, args.target)
     val_df   = load_csv_dataset(args.val_dataset,   args.date, args.target)
 
-    freq = infer_freq(train_df)
+    freq = infer_freq(train_df, args.freq)
     print(f"[INFO] Train: {len(train_df)} rows | Val: {len(val_df)} rows | Freq: {freq}")
 
     covariate_cols = get_covariate_cols(train_df, args.target)
@@ -264,7 +269,7 @@ def mode_predict(args):
     #   - missing numeric values (both from gaps and originally NaN) are filled
     #     by time-based interpolation, with forward/backward fill as fallback for edge rows
     input_df  = input_df.groupby(input_df.index).mean(numeric_only=True)
-    freq_str  = infer_freq(input_df)
+    freq_str  = infer_freq(input_df, args.freq)
     full_idx  = pd.date_range(start=input_df.index[0], end=input_df.index[-1], freq=freq_str)
     input_df  = input_df.reindex(full_idx)
     input_df  = input_df.interpolate(method="time").ffill().bfill()
@@ -276,7 +281,7 @@ def mode_predict(args):
         input_df = input_df.iloc[-lookback_window:]
 
     covariate_cols = get_covariate_cols(input_df, args.target)
-    freq = infer_freq(input_df)
+    freq = infer_freq(input_df, args.freq)
 
     dataset = ListDataset(
         [build_dataset_entry(input_df, args.target, covariate_cols)],
@@ -289,7 +294,7 @@ def mode_predict(args):
 
     # Generate timestamps for the predicted horizon
     last_ts   = input_df.index[-1]
-    inferred  = pd.infer_freq(input_df.index)
+    inferred  = args.freq or pd.infer_freq(input_df.index)
     offset    = pd.tseries.frequencies.to_offset(inferred or "h")
     timestamps = [
         (last_ts + offset * (i + 1)).isoformat()
@@ -336,6 +341,8 @@ def main():
     parser.add_argument("--patience",       type=int,   default=10)
     parser.add_argument("--seed",           type=int,   default=0)
 
+    parser.add_argument("--freq",           default=None,
+                        help="Pandas frequency string (e.g. 'B', 'h', 'D'). If omitted, inferred from data.")
     parser.add_argument("--model-dir",      help="directory to save (train) or load (predict) the model")
 
     args = parser.parse_args()
