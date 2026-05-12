@@ -184,7 +184,6 @@ def main():
     np.random.seed(fix_seed)
 
     args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
-    args.use_gpu = False
 
     if args.use_gpu and args.use_multi_gpu:
         args.devices = args.devices.replace(' ', '')
