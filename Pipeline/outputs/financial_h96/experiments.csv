@@ -1,0 +1,16 @@
+id,dataset,target,date,horizon,results_file,status
+1,Data/financialdata/AAPL.csv,Close,Date,96,Pipeline/outputs/financial/1/results.csv,success
+2,Data/financialdata/JPM.csv,Close,Date,96,Pipeline/outputs/financial/2/results.csv,success
+3,Data/financialdata/KO.csv,Close,Date,96,Pipeline/outputs/financial/3/results.csv,success
+4,Data/financialdata/SPY.csv,Close,Date,96,Pipeline/outputs/financial/4/results.csv,success
+5,Data/financialdata/TSLA.csv,Close,Date,96,Pipeline/outputs/financial/5/results.csv,success
+6,Data/financialdata/AAPL.csv,Close,Date,96,Pipeline/outputs/financial/6/results.csv,success
+7,Data/financialdata/JPM.csv,Close,Date,96,Pipeline/outputs/financial/7/results.csv,success
+8,Data/financialdata/KO.csv,Close,Date,96,Pipeline/outputs/financial/8/results.csv,success
+9,Data/financialdata/SPY.csv,Close,Date,96,Pipeline/outputs/financial/9/results.csv,success
+10,Data/financialdata/TSLA.csv,Close,Date,96,Pipeline/outputs/financial/10/results.csv,success
+11,Data/financialdata/AAPL.csv,Close,Date,96,Pipeline/outputs/financial/11/results.csv,success
+12,Data/financialdata/JPM.csv,Close,Date,96,Pipeline/outputs/financial/12/results.csv,success
+13,Data/financialdata/KO.csv,Close,Date,96,Pipeline/outputs/financial/13/results.csv,success
+14,Data/financialdata/SPY.csv,Close,Date,96,Pipeline/outputs/financial/14/results.csv,success
+15,Data/financialdata/TSLA.csv,Close,Date,96,Pipeline/outputs/financial/15/results.csv,success

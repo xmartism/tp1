@@ -1,0 +1,6 @@
+Dataset,Target,Model,Horizon,Lookback window,Stride,Num Windows,Seed,Train Time (s),Epochs Trained,MSE,MAE,MAPE (%),MDA (%)
+KO.csv,Close,deepAR,96,288,96,4,1462739768,303.92,13,592.6048,23.6679,35.9689,49.87
+KO.csv,Close,nbeats,96,288,96,4,1462739768,57.05,25,115.3085,8.0911,12.3171,48.3
+KO.csv,Close,tsmixer,96,288,96,4,1462739768,7.43,8,30.5436,4.6227,7.11,49.35
+KO.csv,Close,tft,96,288,96,4,1462739768,329.54,32,101.485,9.1423,13.6815,49.09
+KO.csv,Close,dlinear,96,288,96,4,1462739768,7.56,10,24.0517,4.2101,6.4888,47.52
