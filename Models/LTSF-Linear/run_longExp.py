@@ -11,6 +11,16 @@ from exp.exp_main import Exp_Main
 TRAIN_MODE = 'train'
 PREDICT_MODE = 'predict'
 
+def _check_series_length(path, min_len, split_name):
+    if path is None or not os.path.exists(path):
+        return
+    n_rows = sum(1 for _ in open(path, 'r', encoding='utf-8')) - 1
+    if n_rows < min_len:
+        raise ValueError(
+            f"The input `series` are too short to extract even a single sample. "
+            f"Expected min length: `{min_len}`, received max length: `{n_rows}`. "
+            f"(split={split_name}, file={path})"
+        )
 
 def _validate_args(args):
     if args.lookback_window is None:
@@ -21,6 +31,9 @@ def _validate_args(args):
             raise ValueError('--train-dataset is required in --mode train.')
         if not args.val_dataset:
             raise ValueError('--val-dataset is required in --mode train.')
+        min_len = args.lookback_window + args.horizon
+        _check_series_length(args.train_dataset, min_len, 'train')
+        _check_series_length(args.val_dataset, min_len, 'val')
     elif args.mode == PREDICT_MODE:
         if not args.context_dataset:
             raise ValueError('--context-dataset is required in --mode predict.')

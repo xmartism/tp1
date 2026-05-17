@@ -28,7 +28,7 @@ EXPERIMENTS = EXPERIMENTS_FINANCIAL if USE_FINANCIAL else EXPERIMENTS_NONFINANCI
 
 OUTPUTS_ROOT     = Path("Pipeline/outputs/financial") if USE_FINANCIAL else Path("Pipeline/outputs/nonfinancial")
 EXPERIMENTS_FILE = OUTPUTS_ROOT / "experiments.csv"
-EXPERIMENTS_COLS = ["id", "dataset", "target", "date", "horizon", "results_file", "status", "started_at"]
+EXPERIMENTS_COLS = ["id", "dataset", "target", "date", "horizon", "results_file", "status"]
 
 
 def next_experiment_id() -> int:
@@ -59,7 +59,6 @@ def register_experiment(experiment_id: int, dataset: str, target: str, date_col:
             "horizon":      horizon,
             "results_file": str(results_file),
             "status":       status,
-            "started_at":   time.strftime("%Y-%m-%d %H:%M:%S"),
         })
 
 

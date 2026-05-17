@@ -122,6 +122,13 @@ def df_to_tf_dataset(
     n_feature = len(numeric_cols)
     data = df[numeric_cols].values.astype(np.float32)
 
+    min_len = seq_len + pred_len
+    if len(data) < min_len:
+        raise ValueError(
+            f"The input `series` are too short to extract even a single sample. "
+            f"Expected min length: `{min_len}`, received max length: `{len(data)}`."
+        )
+
     ds = tf.keras.utils.timeseries_dataset_from_array(
         data=data,
         targets=None,
