@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model comparison</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8f7f4; color: #2c2c2a; padding: 2rem 1rem; }
+  h1   { font-size: 1.3rem; font-weight: 500; margin-bottom: 0.4rem; color: #2c2c2a; }
+  p.sub { font-size: 0.85rem; color: #73726c; margin-bottom: 2rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 1.5rem; font-size: 12px; color: #5f5e5a; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; }
+  .card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 1.25rem 1.5rem; }
+  .card-title { font-size: 0.78rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;
+                 color: #5f5e5a; margin-bottom: 4px; }
+  .card-hint  { font-size: 0.75rem; color: #888780; margin-bottom: 1rem; }
+  .chart-wrap { position: relative; width: 100%; height: 260px; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Model comparison — all metrics</h1>
+<p class="sub">Priemer ± std naprieč 3 seedmi. Osa Y je logaritmická tam kde rozsah hodnôt je veľký.</p>
+
+<div class="legend" id="legend"></div>
+<div class="grid"   id="grid"></div>
+
+<script>
+const LABELS  = ["(1, 6, 11)", "(2, 7, 12)", "(3, 8, 13)", "(4, 9, 14)", "(5, 10, 15)"];
+const CHARTS  = [{"id": "Train_Time_s", "label": "Train time (s)", "direction": "lower", "logScale": true, "datasets": [{"label": "deepAR", "data": [130.3367, 123.3367, 136.52, 133.56, 186.09], "std": [8.3373, 1.3641, 3.7852, 19.3995, 57.8693], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [52.7267, 38.1567, 77.35, 52.54, 26.7567], "std": [8.1641, 1.5619, 16.5764, 19.0111, 1.782], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [23.0167, 19.2467, 12.0833, 30.5733, 17.21], "std": [1.6574, 2.282, 0.1986, 6.012, 0.5717], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [40.75, 16.1767, 26.4033, 17.5767, 23.7333], "std": [7.1506, 2.3247, 2.0785, 4.633, 2.7138], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [8.0733, 5.8933, 6.4067, 6.6033, 7.06], "std": [0.4725, 0.2363, 0.2309, 0.7218, 0.2339], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}, {"id": "Epochs_Trained", "label": "Epochs trained", "direction": "lower", "logScale": true, "datasets": [{"label": "deepAR", "data": [11.3333, 11.0, 12.0, 12.0, 16.0], "std": [0.5774, 0.0, 0.0, 1.7321, 5.2915], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [15.0, 10.3333, 23.0, 15.0, 6.6667], "std": [2.6458, 0.5774, 5.2915, 6.0828, 0.5774], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [32.3333, 27.3333, 15.0, 45.0, 22.3333], "std": [3.0551, 4.0415, 0.0, 9.6437, 1.5275], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [36.0, 11.3333, 21.6667, 12.6667, 19.0], "std": [7.2111, 2.3094, 2.0817, 4.7258, 2.6458], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [13.6667, 8.3333, 9.6667, 10.0, 11.3333], "std": [1.1547, 0.5774, 0.5774, 1.7321, 0.5774], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}, {"id": "MSE", "label": "MSE", "direction": "lower", "logScale": true, "datasets": [{"label": "deepAR", "data": [8654.4444, 14618.4039, 287.7202, 37100.7697, 15311.4565], "std": [1653.2542, 4708.2345, 86.7775, 5009.758, 7290.5565], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [7754.1975, 12484.0416, 105.4485, 31358.043, 11355.3738], "std": [1813.0068, 254.159, 2.8295, 3983.1101, 1065.5032], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [309.3765, 383.3086, 13.5574, 1024.1524, 4056.9042], "std": [3.7008, 1.2344, 0.2379, 11.968, 83.1148], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [3320.3639, 2953.2717, 36.1493, 14340.8229, 7838.6782], "std": [749.6973, 505.0714, 13.6275, 1859.2085, 1319.2082], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [302.7205, 477.1171, 13.751, 1028.4387, 5276.0495], "std": [10.561, 24.5591, 0.4494, 39.0159, 148.6593], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}, {"id": "MAE", "label": "MAE", "direction": "lower", "logScale": true, "datasets": [{"label": "deepAR", "data": [89.0409, 111.7384, 16.1112, 185.0916, 98.1913], "std": [8.3038, 18.117, 2.5353, 12.9128, 25.1394], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [83.8412, 104.3515, 9.3335, 168.6483, 86.0195], "std": [11.2922, 1.2411, 0.149, 10.9383, 3.2313], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [13.1546, 14.815, 2.806, 23.3291, 52.4746], "std": [0.0841, 0.0172, 0.0165, 0.0773, 0.4276], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [51.7591, 42.9226, 4.9191, 101.063, 74.8332], "std": [6.609, 3.9872, 0.995, 8.7015, 4.3325], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [12.7705, 16.5255, 2.9149, 23.7799, 58.8291], "std": [0.1297, 0.3471, 0.0662, 1.0991, 1.0026], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}, {"id": "MAPE_pct", "label": "MAPE (%)", "direction": "lower", "logScale": false, "datasets": [{"label": "deepAR", "data": [39.303, 44.3097, 24.3699, 31.3283, 29.2833], "std": [3.7311, 7.4456, 3.8996, 2.2408, 7.1549], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [36.9677, 41.2982, 13.9804, 28.5145, 28.428], "std": [5.0756, 0.5549, 0.2315, 1.9052, 2.0147], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [5.8424, 6.0738, 4.2743, 4.0601, 16.8245], "std": [0.0367, 0.0046, 0.0252, 0.0126, 0.1585], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [22.679, 17.0275, 7.4211, 16.9863, 23.6231], "std": [2.9341, 1.5261, 1.4797, 1.4622, 0.6145], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [5.7509, 6.7048, 4.4601, 4.1224, 18.9061], "std": [0.0676, 0.1041, 0.0974, 0.1443, 0.4058], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}, {"id": "MDA_pct", "label": "MDA (%)", "direction": "higher", "logScale": false, "datasets": [{"label": "deepAR", "data": [45.6933, 50.3933, 48.13, 51.0867, 50.5667], "std": [1.305, 1.3815, 2.129, 2.8754, 3.2201], "borderColor": "#378ADD", "backgroundColor": "#378ADD33", "borderDash": [], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tft", "data": [50.4767, 49.1733, 49.61, 50.74, 51.35], "std": [1.6809, 1.3139, 0.6879, 1.8924, 2.7461], "borderColor": "#1D9E75", "backgroundColor": "#1D9E7533", "borderDash": [6, 3], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "tsmixer", "data": [53.0, 50.0433, 49.1733, 52.5667, 49.0], "std": [2.6486, 3.9202, 1.593, 2.8739, 1.3397], "borderColor": "#D85A30", "backgroundColor": "#D85A3033", "borderDash": [2, 2], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "nbeats", "data": [47.2567, 48.5633, 52.3933, 51.5233, 50.48], "std": [3.395, 3.4114, 3.2815, 2.2226, 3.6583], "borderColor": "#7F77DD", "backgroundColor": "#7F77DD33", "borderDash": [8, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}, {"label": "dlinear", "data": [50.13, 49.1733, 47.4333, 49.7833, 49.52], "std": [3.4565, 2.6837, 2.0954, 3.8058, 1.4825], "borderColor": "#888780", "backgroundColor": "#88878033", "borderDash": [4, 4, 2, 4], "borderWidth": 2, "pointRadius": 4, "tension": 0.3, "fill": false}]}];
+const MODELS  = ["deepAR", "tft", "tsmixer", "nbeats", "dlinear"];
+const COLORS  = {"deepAR": "#378ADD", "tft": "#1D9E75", "tsmixer": "#D85A30", "nbeats": "#7F77DD", "dlinear": "#888780"};
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  MODELS.forEach(m => {
+    const s = document.createElement('span');
+    s.innerHTML = `<i style="background:${COLORS[m]}"></i>${m}`;
+    el.appendChild(s);
+  });
+}
+
+function makeErrorBarPlugin() {
+  return {
+    id: 'errorBars',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds, di) => {
+        if (!ds.std) return;
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((pt, i) => {
+          const std = ds.std[i];
+          if (std == null || std === 0) return;
+          const x  = pt.x;
+          const yScale = chart.scales.y;
+          const mean = ds.data[i];
+          if (mean == null) return;
+
+          let yTop, yBot;
+          if (yScale.type === 'logarithmic') {
+            const lo = Math.max(mean - std, mean * 0.01);
+            yTop = yScale.getPixelForValue(mean + std);
+            yBot = yScale.getPixelForValue(lo);
+          } else {
+            yTop = yScale.getPixelForValue(mean + std);
+            yBot = yScale.getPixelForValue(mean - std);
+          }
+
+          ctx.save();
+          ctx.strokeStyle = ds.borderColor;
+          ctx.lineWidth   = 1;
+          ctx.globalAlpha = 0.55;
+          ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x - 4, yTop); ctx.lineTo(x + 4, yTop); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x - 4, yBot); ctx.lineTo(x + 4, yBot); ctx.stroke();
+          ctx.restore();
+        });
+      });
+    }
+  };
+}
+
+function renderCharts() {
+  const grid   = document.getElementById('grid');
+  const plugin = makeErrorBarPlugin();
+  Chart.register(plugin);
+
+  CHARTS.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const hint = c.direction === 'lower' ? 'nižšie = lepšie' : 'vyššie = lepšie';
+    card.innerHTML = `
+      <div class="card-title">${c.label}</div>
+      <div class="card-hint">${hint}${c.logScale ? ' · log škála' : ''}</div>
+      <div class="chart-wrap"><canvas id="${c.id}" role="img"
+        aria-label="Line chart of ${c.label} per experiment group"></canvas></div>`;
+    grid.appendChild(card);
+
+    new Chart(document.getElementById(c.id), {
+      type: 'line',
+      data: { labels: LABELS, datasets: c.datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const std = ctx.dataset.std?.[ctx.dataIndex];
+                const v   = ctx.parsed.y;
+                const fmt = n => n >= 1000
+                  ? n.toLocaleString('sk', {maximumFractionDigits: 0})
+                  : n.toLocaleString('sk', {maximumFractionDigits: 2});
+                return `${ctx.dataset.label}: ${fmt(v)}${std != null ? ' ± ' + fmt(std) : ''}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            type: c.logScale ? 'logarithmic' : 'linear',
+            ticks: {
+              font: { size: 11 },
+              callback: v => v >= 10000
+                ? (v/1000).toFixed(0)+'k'
+                : v >= 1000 ? v.toLocaleString('sk') : +v.toPrecision(4)
+            },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          },
+          x: {
+            ticks: { font: { size: 11 }, maxRotation: 30 },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  });
+}
+
+buildLegend();
+renderCharts();
+</script>
+</body>
+</html>
